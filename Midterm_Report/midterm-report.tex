@@ -1,0 +1,39 @@
+\documentclass[SIGGRAPH]{acmart}
+
+\begin{document}
+
+\title{Midterm Report}
+\author{Xiaoyu Xiong}
+\author{Jingzhe Shi}
+\maketitle
+
+\section{Chosen Project Topic}
+3-Simulation
+
+\section{Goals}
+For the material type, we do not intend to cover the fluid simulation and focus mainly on solid materials (cloth, rigid body, and deformable body).\\ 
+In more details, we will use mesh to represent arbitrary geometry styles, and we will consider the collision based on mesh (e.g. each triangle-triangle pair). Thus, our collision detection method will be independent of body type and will be able to handle the collision between any type of material we covered.\\
+For more technical parts, we plan to use Taichi as the tool to build our engine. Thus, the GPU acceleration and the numerical methods will be based on Taichi. Our optimization will mainly focus on the structure (e.g. using bounding ball to restrict the number of collision pairs we need to process).\\
+We believe that our engine can handle customized scene configuration and fixed operation in procedure. However, due to the restriction of computation resource, real-time interaction will be hard to achieve.\\
+Finally, we now do not have so much idea on the final rendering part. Maybe we need more imagination in the following few weeks.
+
+\section{Schedule}
+Since week 8 and 9 are the midterm weeks, we will mainly focus on reading the related papers and learning the Taichi framework.\\
+In week 10 and 11, we will start to build the basic structure of our engine.\\
+In week 12 and 13, we will finish the basic structure and start to implement the collision detection and response part.\\
+In week 14, we will build some basic scenes and test our engine.\\
+In week 15, we will finish the rendering part and start to optimize our engine.\\
+
+\section{Current Progress}
+Actually, we have finished a simple toy model using mass-spring system and explicit Euler method. (You can find it in the zip file we provided.) This model contains some rigid body and a cloth. However, it does not support mesh representation and only contains some simple geometry shapes, and the configuration of the scene is fixed. Yet we still can take it as a start point of our project.
+
+\section{Future Plan}
+Actually we have found several papers which provide some useful algorithms for our project.\\
+For the kernel collision detection and responding part, we find the  IPC model\cite{li2020incremental} model to solve it. This model actually adds a special string between those close mesh vertices and uses the string to handle the collision.\\
+For rigid body, we find other two papers. The first paper\cite{liu2012quick} provides a basic method to handle the case where many rigid bodies connected together. The second paper\cite{lan2022affine} introduces the affine body concept, supporting more efficient collision detection.\\
+For deformable body, we use the finite element method\cite{barbicsiggraph} to handle.
+
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{midterm-report}
+\end{document}
