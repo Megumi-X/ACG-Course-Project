@@ -25,7 +25,7 @@ In week 14, we will build some basic scenes and test our engine.\\
 In week 15, we will finish the rendering part and start to optimize our engine.\\
 
 \section{Current Progress}
-Actually, we have finished a simple toy model using mass-spring system and explicit Euler method. (You can find it in the zip file we provided.) This model contains some rigid body and a cloth. However, it does not support mesh representation and only contains some simple geometry shapes, and the configuration of the scene is fixed. Yet we still can take it as a start point of our project.
+Actually, we have finished a simple toy model using mass-spring system and explicit Euler method. (You can find two versions of it in the zip file we provided.) One version has a clearer code structure, and its configuration can be adjusted. The other version is optimized for a specific configuration and has a better performance: some function calls are removed and the codes are rearranged in such way that taichi can run loops in a more parallel way. This optimized version can run about $20\%$ fps faster than the basic version.
 
 \section{Future Plan}
 Actually we have found several papers which provide some useful algorithms for our project.\\
