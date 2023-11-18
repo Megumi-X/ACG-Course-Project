@@ -1,7 +1,5 @@
 import taichi as ti
-
-if  __name__ == '__main__':
-    ti.init(arch=ti.cuda)
+import sympy as sp
 
 @ti.dataclass
 class GeometryShape:
@@ -12,7 +10,6 @@ class GeometryShape:
 
 @ti.data_oriented
 class FiniteElement:
-    @ti.kernel
     def __init__(self):
         self.vertices_num = 4
         self.vertices = ti.Vector.field(n=3, dtype=ti.f32, shape=4)
@@ -90,3 +87,10 @@ class FiniteElement:
         for i in range(4):
             ret += self.polynomials[i] * values[i]
         return ret
+    
+    @ti.func
+    def IntegratePoly(self, poly):
+        pos = (self.vertices[0] + self.vertices[1] + self.vertices[2] + self.vertices[3]) / 4
+        x, y, z = sp.symbols('x y z')
+        value = poly.subs([(x, pos[0]), (y, pos[1]), (z, pos[2])]).evalf()
+        return value * self.geometry_info[3, 0].measure

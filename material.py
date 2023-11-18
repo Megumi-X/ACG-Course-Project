@@ -18,7 +18,6 @@ def DeterminantGrad(A: ti.types.matrix(3, 3, ti.f32)) -> ti.types.matrix(3, 3, t
 
 @ti.data_oriented
 class Material:
-    @ti.kernel
     def __init__(self):
         self.density = 0.0
         self.youngs_modulus = 0.0
