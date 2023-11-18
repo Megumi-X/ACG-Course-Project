@@ -1,0 +1,94 @@
+import taichi as ti
+import numpy as np
+import sympy as sp
+
+if  __name__ == '__main__':
+    ti.init(arch=ti.cuda)
+
+@ti.dataclass
+class GeometryShape:
+    dim: ti.int32
+    vertices_num: ti.int32
+    vertex_indices: ti.types.vector(4, ti.int32)
+    measure: ti.f32
+
+@ti.data_oriented
+class FiniteElement:
+    @ti.kernel
+    def __init__(self):
+        self.vertices_num = 4
+        self.vertices = ti.Vector.field(n=3, dtype=ti.f32, shape=4)
+        self.polynomials = ti.Vector.field(n=4, dtype=ti.f32, shape=4)
+        self.geometry_info = ti.Struct.field(GeometryShape, shape=(4, 6)) # 0D to 3D, 4 dims in total, and each dim has at most 6 elements
+
+    @ti.kernel
+    def Initialize(self, v0: ti.types.vector(3, ti.f32), v1: ti.types.vector(3, ti.f32), v2: ti.types.vector(3, ti.f32), v3: ti.types.vector(3, ti.f32)):
+        # Set vertices
+        self.vertices[0] = v0
+        self.vertices[1] = v1
+        self.vertices[2] = v2
+        self.vertices[3] = v3
+
+        # Set geometry info
+        volume = (v1 - v0).cross(v2 - v1).dot(v3 - v2) / 6
+        if volume < 0 :
+            order = ti.Vector([0, 1, 2, 3])
+            volume = - volume
+        else:
+            order = ti.Vector([0, 2, 1, 3])
+        # 0D
+        for i in range(4): 
+            self.geometry_info[0, i].dim = 0
+            self.geometry_info[0, i].vertices_num = 1
+            self.geometry_info[0, i].vertex_indicies = i
+            self.geometry_info[0, i].measure = 0.0
+        edge_index = 0
+        # 1D
+        for i in range(4): 
+            for j in range(i + 1, 4):
+                self.geometry_info[1, edge_index].dim = 1
+                self.geometry_info[1, edge_index].vertices_num = 2
+                self.geometry_info[1, edge_index].vertex_indicies[0] = i
+                self.geometry_info[1, edge_index].vertex_indicies[1] = j
+                self.geometry_info[1, edge_index].measure = (self.vertices[i] - self.vertices[j]).norm()
+                edge_index += 1
+        # 2D
+        self.geometry_info[2, 0].vertex_indicies = ti.Vector([order[0], order[1], order[2], 0])
+        self.geometry_info[2, 1].vertex_indicies = ti.Vector([order[1], order[0], order[3], 0])
+        self.geometry_info[2, 2].vertex_indicies = ti.Vector([order[2], order[1], order[3], 0])
+        self.geometry_info[2, 3].vertex_indicies = ti.Vector([order[0], order[2], order[3], 0])
+        for i in range(4):
+            self.geometry_info[2, i].dim = 2
+            self.geometry_info[2, i].vertices_num = 3
+            v0 = self.geometry_info[2, i].vertex_indices[0]
+            v1 = self.geometry_info[2, i].vertex_indices[1]
+            v2 = self.geometry_info[2, i].vertex_indices[2]
+            v01 = self.vertices[v1] - self.vertices[v0]
+            v02 = self.vertices[v2] - self.vertices[v0]
+            self.geometry_info[2, i].measure = v01.cross(v02).norm() / 2
+        # 3D
+        self.geometry_info[3, 0].vertex_indices = order
+        self.geometry_info[3, 0].dim = 3
+        self.geometry_info[3, 0].vertices_num = 4
+        self.geometry_info[3, 0].measure = volume
+
+        # Set polynomials
+        A = ti.Matrix([[0.0 for i in range(self.vertices_num)] for j in range(4)])
+        for i in range(4):
+            A[0, i] = self.vertices[i][0]
+            A[1, i] = self.vertices[i][1]
+            A[2, i] = self.vertices[i][2]
+            A[3, i] = 1.0
+        A_inv = A.inverse()
+        for i in range(4):
+            self.polynomials[i][0] = A_inv[i, 0]
+            self.polynomials[i][1] = A_inv[i, 1]
+            self.polynomials[i][2] = A_inv[i, 2]
+            self.polynomials[i][3] = A_inv[i, 3]
+
+    @ti.kernel
+    def Function(self, values: ti.types.vector(4, ti.f32)) -> ti.types.vector(4, ti.f32):
+        ret = ti.Vector([0.0 for i in range(4)])
+        for i in range(4):
+            ret += self.polynomials[i] * values[i]
+        return ret
