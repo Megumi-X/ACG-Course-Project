@@ -30,6 +30,14 @@ class DeformableSimulator:
         ti.root.pointer(ti.ij, grid_size).dense(ti.ij, block_size).place(self.int_matrix)
         ti.root.pointer(ti.ij, grid_size).dense(ti.ij, block_size).place(self.int_density_matrix)
         self.elastic_gradient_map = []
+        self.vertices_num = vertices_num
+        self.element_num = element_num
+        self.free_vertex = ti.Matrix([[0, 0, 0] for i in range(self.vertices_num)])
+        self.dirichlet_vertex = ti.Matrix([[0, 0, 0] for i in range(self.vertices_num)])
+        self.dirichlet_value = ti.Matrix([[0.0, 0.0, 0.0] for i in range(self.vertices_num)])
+        self.h = ti.field(dtype=ti.float32, shape=())
+        self.x0_np = np.array([0 for i in range(self.vertices_num * 3)])
+        self.x0_next_np = self.x0_np
 
     @ti.kernel
     def InitializePosition(self):
@@ -116,6 +124,15 @@ class DeformableSimulator:
             self.elastic_gradient_map[e] = []
             for i in range(4):
                 self.elastic_gradient_map[element[i]].append([e, i])
+        for i in range(self.vertices_num):
+            for d in range(3):
+                if self.dirichlet_boundary_condition[i][d] == float('inf'):
+                    self.free_vertex[i, d] = 1
+                    self.dirichlet_vertex[i, d] = 0
+                else:
+                    self.free_vertex[i, d] = 0
+                    self.dirichlet_vertex[i, d] = 1
+                    self.dirichlet_value[i, d] = self.dirichlet_boundary_condition[i][d]
 
     @ti.func
     def ComputeElasticEnergy(self, position):
@@ -170,21 +187,16 @@ class DeformableSimulator:
         return force
 
     @ti.func
-    def ComputeEnergy(self, position, time_step):
-        h = time_step
+    def ComputeEnergy(self, position, time_step) -> float:
         vertices_num = self.undeformed.vertices_num
-        inv_h = 1 / h
-        x0 = self.position
-        v0 = self.velocity
-        x_next = position
-        a = self.external_acceleration
-        y = x0 + v0 * h + a * h * h
+        inv_h = 1 / time_step
+        y = self.position + self.velocity * time_step + self.external_acceleration * time_step * time_step
         coefficient = inv_h * inv_h / 2 
         kinetic_energy = 0.0
         delta = ti.Vector.field(n=vertices_num, dtype=ti.f32, shape=3)
         for i in range(vertices_num):
             for d in range(3):
-                x_next_d = x_next[i, d]
+                x_next_d = position[i, d]
                 y_d = y[i, d]
                 delta[d, i] = x_next_d - y_d
         for d in range(3):
@@ -195,71 +207,84 @@ class DeformableSimulator:
     
     @ti.func
     def ComputeEnergyGradient(self, position, time_step):
-        h = time_step
-        vertices_num = self.undeformed.vertices_num
-        inv_h = 1 / h
-        x0 = self.position
-        v0 = self.velocity
-        x_next = position
-        a = self.external_acceleration
-        y = x0 + v0 * h + a * h * h
+        vertices_num = self.vertices_num
+        inv_h = 1 / time_step
         coefficient = inv_h * inv_h
         kinetic_gradient = ti.Matrix(n=vertices_num, m=3, dtype=ti.f32)
         delta = ti.Matrix(n=vertices_num, m=3, dtype=ti.f32)
         for i in range(vertices_num):
             for d in range(3):
-                x_next_d = x_next[i, d]
-                y_d = y[i, d]
+                x_next_d = position[i, d]
+                y_d = (self.position + self.velocity * time_step + self.external_acceleration * time_step * time_step)[i, d]
                 delta[i, d] = x_next_d - y_d
         kinetic_gradient = self.int_density_matrix @ delta
         kinetic_gradient *= coefficient
-        elastic_gradient = -self.ComputeElasticForce(x_next)
+        elastic_gradient = -self.ComputeElasticForce(position)
         return (kinetic_gradient + elastic_gradient)
 
-        
-    @ti.kernel
-    def Forward(self, time_step: ti.f32):
-        x0 = self.position
-        h = time_step
-        inv_h = 1 / h
-        vertices_num = self.undeformed.vertices_num
-        free_vertex = ti.Matrix(n=vertices_num, m=3, dtype=ti.int32)
-        dirichlet_vertex = ti.Matrix(n=vertices_num, m=3, dtype=ti.int32)
-        dirichlet_value = ti.Matrix(n=vertices_num, m=3, dtype=ti.f32)
-        for i in range(vertices_num):
+    @ti.func
+    def E(self, x_next):
+        x_next_ti = ti.field(dtype=ti.f32, shape=(self.vertices_num, 3))
+        for i in range(self.vertices_num * 3):
+            q = i // 3
+            r = i % 3
+            x_next_ti[q, r] = x_next[i]
+        energy = self.ComputeEnergy(x_next_ti, self.h[None])
+        return float(energy)
+    
+    @ti.func
+    def E_gradient(self, x_next):
+        x_next_ti = ti.field(dtype=ti.f32, shape=(self.vertices_num, 3))
+        for i in range(self.vertices_num * 3):
+            q = i // 3
+            r = i % 3
+            x_next_ti[q, r] = x_next[i]
+        g = self.ComputeEnergyGradient(x_next, self.h[None])
+        g1 = g * self.free_vertex
+        g1_np = np.array([0 for i in range(3 * self.vertices_num)])
+        for i in range(self.vertices_num):
             for d in range(3):
-                if self.dirichlet_boundary_condition[i][d] == float('inf'):
-                    free_vertex[i, d] = 1
-                    dirichlet_vertex[i, d] = 0
+                g1_np[i * 3 + d] = g1[i, d]
+        return g1_np
+    
+    @ti.kernel
+    def Optimizer(self):
+        inv_h = 1 / self.h[None]       
+        max_iter = 100
+        ftol = 1e-10
+        res = scipy.optimize.minimize(self.E, self.x0_np, method="L-BFGS-B", jac=self.E_gradient, options={ "ftol": ftol, "maxiter": max_iter, "iprint": -1 })
+        for i in range(self.vertices_num):
+            for d in range(3):
+                if self.free_vertex[i, d] == 1:
+                    self.next_position[i][d] = res.x[i, d]
+                    self.next_velocity[i][d] = (self.next_position[i][d] - self.position[i][d]) * inv_h
                 else:
-                    free_vertex[i, d] = 0
-                    dirichlet_vertex[i, d] = 1
-                    dirichlet_value[i, d] = self.dirichlet_boundary_condition[i][d]
-        def E(x_next):
-            x_next_ti = ti.field(dtype=ti.f32, shape=(vertices_num, 3))
-            x_next_ti.from_numpy(x_next)
-            return self.ComputeEnergy(x_next_ti, h)
-        def E_gradient(x_next):
-            x_next_ti = ti.field(dtype=ti.f32, shape=(vertices_num, 3))
-            x_next_ti.from_numpy(x_next)
-            g = self.ComputeEnergyGradient(x_next, h)
-            g1 = g * free_vertex
-            g1_np = np.array([[g1[i, j] for j in range(3)] for i in range(vertices_num)])
-            return g1_np
-        
+                    self.next_position[i][d] = self.dirichlet_value[i, d]
+                    self.next_velocity[i][d] = 0.0
+
+
+    def Forward(self, time_step: ti.f32):
+        self.h[None] = time_step  
+        for i in range(self.vertices_num):
+            for d in range(3):
+                self.x0_np[i * 3 + d] = self.position[i][d]
+                self.x0_next_np[i * 3 + d] = self.next_position[i][d]      
         # Optimize
-        x0_np = np.array([[x0[i, j] for j in range(3)] for i in range(vertices_num)])
+        '''
+        x0_np = np.array([[self.position[i][j] for j in range(3)] for i in range(self.vertices_num)])
         x_next_np = x0_np
         max_iter = 100
         ftol = 1e-10
         def callback(OptimizeResult):
             pass
-        res = scipy.optimize.minimize(E, x0_np, method="L-BFGS-B", jac=E_gradient, callback=callback, options={ "ftol": ftol, "maxiter": max_iter, "iprint": -1 })
-        for i in range(vertices_num):
+        res = scipy.optimize.minimize(self.E, x0_np, method="L-BFGS-B", jac=self.E_gradient, callback=callback, options={ "ftol": ftol, "maxiter": max_iter, "iprint": -1 })
+        for i in range(self.vertices_num):
             for d in range(3):
-                if free_vertex[i, d] == 1:
+                if self.free_vertex[i, d] == 1:
                     self.next_position[i][d] = res.x[i, d]
                     self.next_velocity[i][d] = (self.next_position[i][d] - self.position[i][d]) * inv_h
                 else:
-                    self.next_position[i][d] = dirichlet_value[i, d]
+                    self.next_position[i][d] = self.dirichlet_value[i, d]
                     self.next_velocity[i][d] = 0.0
+        '''
+        self.Optimizer()
