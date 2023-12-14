@@ -16,6 +16,14 @@ def DeterminantGrad(A: ti.types.matrix(3, 3, ti.f32)) -> ti.types.matrix(3, 3, t
     dJdA[2, 2] = A[0, 0] * A[1, 1] - A[0, 1] * A[1, 0]
     return dJdA    
 
+materialTypeDict = dict(
+    density = ti.f32,
+    youngs_modulus = ti.f32,
+    possions_ratio = ti.f32,
+    lam = ti.f32,
+    mu = ti.f32,
+)
+
 @ti.data_oriented
 class Material:
     def __init__(self):
@@ -57,3 +65,24 @@ class Material:
         alpha = (1 - 1 / (dim + delta)) * mu / la + 1
         dJdF = DeterminantGrad(F)
         return (1 - 1 / (Ic + delta)) * mu * F + la * (J - alpha) * dJdF
+
+@ti.kernel
+def ComputeEnergyDensity(F:ti.types.matrix(3,3,ti.f32),lam:ti.f32, mu:ti.f32):
+    C = F.transpose() @ F
+    J = F.determinant()
+    Ic = C[0, 0] + C[1, 1] + C[2, 2]
+    delta = 1
+    dim = 3
+    alpha = (1 - 1 / (dim + delta)) * mu / lam + 1
+    return mu / 2 * (Ic - dim) + lam / 2 * (J - alpha) * (J - alpha) - 0.5 * mu * ti.log(Ic + delta)
+
+@ti.kernel
+def ComputeStressDensity(F:ti.types.matrix(3,3,ti.f32),lam:ti.f32, mu:ti.f32):
+    C = F.transpose() @ F
+    J = F.determinant()
+    Ic = C[0, 0] + C[1, 1] + C[2, 2]
+    delta = 1
+    dim = 3
+    alpha = (1 - 1 / (dim + delta)) * mu / lam + 1
+    dJdF = DeterminantGrad(F)
+    return (1 - 1 / (Ic + delta)) * mu * F + lam * (J - alpha) * dJdF

@@ -7,15 +7,36 @@ class GeometryShape:
     vertices_num: ti.int32
     vertex_indices: ti.types.vector(4, ti.int32)
     measure: ti.f32
-
+geometry_info_type = ti.types.struct(
+        dim=ti.i32,
+        vertices_num=ti.i32,
+        vertex_indices=ti.types.vector(4, ti.i32),
+        measure = ti.f32,
+    )
+finiteElementTypeDict = dict(
+    vertices_num = ti.i32,
+    vertices = ti.types.matrix(4,3,dtype=ti.f32),
+    polynomials = ti.types.matrix(4,4,dtype=ti.f32),
+    geometry_info_dim = ti.types.matrix(4,6,dtype=ti.i32),
+    geometry_info_vertices_num = ti.types.matrix(4,6,dtype=ti.i32),
+    geometry_info_vertex_indices_0 = ti.types.matrix(6,4,ti.i32),
+    geometry_info_vertex_indices_1 = ti.types.matrix(6,4,ti.i32),
+    geometry_info_vertex_indices_2 = ti.types.matrix(6,4,ti.i32),
+    geometry_info_vertex_indices_3 = ti.types.matrix(6,4,ti.i32),
+    geometry_info_measure = ti.types.matrix(4,6,ti.f32),
+)
 @ti.data_oriented
 class FiniteElement:
     def __init__(self):
         self.vertices_num = 4
         self.vertices = ti.Vector.field(n=3, dtype=ti.f32, shape=4)
         self.polynomials = ti.Vector.field(n=4, dtype=ti.f32, shape=4)
-        self.geometry_info = ti.Struct.field(GeometryShape, shape=(4, 6)) # 0D to 3D, 4 dims in total, and each dim has at most 6 elements
-
+        self.geometry_info = ti.Struct.field({
+            'dim': ti.i32,
+            'vertices_num': ti.i32,
+            'vertex_indices': ti.types.vector(4, ti.i32),
+            'measure': ti.f32,
+        }, shape=(4,6))
     @ti.kernel
     def Initialize(self, v0: ti.types.vector(3, ti.f32), v1: ti.types.vector(3, ti.f32), v2: ti.types.vector(3, ti.f32), v3: ti.types.vector(3, ti.f32)):
         # Set vertices
@@ -94,3 +115,20 @@ class FiniteElement:
         x, y, z = sp.symbols('x y z')
         value = poly.subs([(x, pos[0]), (y, pos[1]), (z, pos[2])]).evalf()
         return value * self.geometry_info[3, 0].measure
+
+
+
+# polynomials = ti.Vector.field(n=4, dtype=ti.f32, shape=4).
+@ti.kernel
+def Function(values:ti.types.vector(4,ti.f32),polynomials:ti.types.matrix(4,4,ti.f32)) -> ti.types.vector(4,ti.f32):
+    ret = ti.Vector([0.0 for i in range(4)])
+    for i in range(4):
+        ret += polynomials[i] * values[i]
+    return ret
+
+@ti.func
+def IntegratePoly(poly,vertices:ti.types.matrix(4,3,ti.f32),geometry_info_measure: ti.types.matrix(4,6,ti.f32)):
+    pos = (vertices[0] + vertices[1] + vertices[2] + vertices[3]) / 4
+    x, y, z = sp.symbols('x y z')
+    value = poly.subs([(x, pos[0]), (y, pos[1]), (z, pos[2])]).evalf()
+    return value * geometry_info_measure[3, 0]

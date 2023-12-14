@@ -3,8 +3,9 @@ import sympy as sp
 import scipy
 import numpy as np
 
-from domain import Domain
+from domain import Domain, IntegratePoly
 from material import Material
+from material import materialTypeDict, ComputeEnergyDensity, ComputeStressDensity
 
 
 ti.init(arch=ti.cuda)
@@ -13,7 +14,7 @@ ti.init(arch=ti.cuda)
 class DeformableSimulator:
     def __init__(self, vertices_num: ti.int32, element_num: ti.int32):
         self.undeformed = Domain(vertices_num, element_num)
-        self.material = ti.Struct.field(Material, shape=element_num)
+        self.material = ti.Struct.field(materialTypeDict, shape=element_num)
         self.position = ti.Vector.field(n=3, dtype=ti.f32, shape=vertices_num)
         self.pre_position = ti.Vector.field(n=3, dtype=ti.f32, shape=vertices_num)
         self.velocity = ti.Vector.field(n=3, dtype=ti.f32, shape=vertices_num)
@@ -51,15 +52,24 @@ class DeformableSimulator:
             element = self.undeformed.elements[e]
             local_matrix = ti.Matrix([[0.0 for i in range(4)] for j in range(4)])
             for i in range(4):
-                phi_i = finite_element.polynomials[i]
-                x, y, z = sp.symbols('x y z')
-                poly_phi_i = phi_i[0] * x + phi_i[1] * y + phi_i[2] * z + phi_i[3] 
+                phi_i = ti.Vector([finite_element.polynomials[i,j] for j in range(6)])
+                # x, y, z = sp.symbols('x y z')
+                # poly_phi_i = phi_i[0] * x + phi_i[1] * y + phi_i[2] * z + phi_i[3] 
                 for j in range(i, 4):
-                    phi_j = finite_element.polynomials[j]
-                    poly_phi_j = phi_j[0] * x + phi_j[1] * y + phi_j[2] * z + phi_j[3] 
-                    w_ij = finite_element.IntegratePoly(poly_phi_i * poly_phi_j)
+                    phi_j = ti.Vector([finite_element.polynomials[j,jj] for jj in range(6)])
+                    # poly_phi_j = phi_j[0] * x + phi_j[1] * y + phi_j[2] * z + phi_j[3] 
+                    pos = ti.Vector([0.0,0.0,0.0])
+                    for ii in range(4):
+                        pos += ti.Vector([finite_element.vertices[ii,jj] for jj in range(3)])
+                    # pos = (finite_element.vertices[0] + finite_element.vertices[1] + finite_element.vertices[2] + finite_element.vertices[3]) / 4
+                    value = (phi_i[0] * pos[0] + phi_i[1] * pos[1] + phi_i[2] * pos[2] + phi_i[3]) * (phi_j[0] * pos[0] + phi_j[1] * pos[1] + phi_j[2] * pos[2] + phi_j[3])
+                    w_ij = value * finite_element.geometry_info_measure[3,0]
+                    # w_ij = IntegratePoly(poly_phi_i * poly_phi_j, finite_element.vertices, finite_element.geometry_info_measure)
+                    # w_ij = finite_element.IntegratePoly(poly_phi_i * poly_phi_j)
                     if i == j:
                         local_matrix[i, j] += w_ij
+                        # print("AAAAAAAAAAAAAA")
+                        # print(element)
                         ti.activate(self.int_matrix, element[i], element[i])
                         self.int_matrix[element[i], element[i]] += w_ij
                         ti.activate(self.int_density_matrix, element[i], element[i])
@@ -83,7 +93,12 @@ class DeformableSimulator:
         # Initialize the material
         elements_num = self.undeformed.elements_num
         for i in range(elements_num):
-            self.material[i].Initialize(density, youngs_modulus, poissons_ratio)
+            self.material[i].density = density
+            self.material[i].youngs_modulus = youngs_modulus
+            self.material[i].poissons_ratio = poissons_ratio
+            self.material[i].lam = youngs_modulus * poissons_ratio / ((1 + poissons_ratio) * (1 - 2 * poissons_ratio))
+            self.material[i].mu = youngs_modulus / (2 * (1 + poissons_ratio))
+            # self.material[i].Initialize(density, youngs_modulus, poissons_ratio)
 
         # Initialize the position and velocity
         vertices_num = self.undeformed.vertices_num
@@ -96,7 +111,7 @@ class DeformableSimulator:
         self.elastic_gradient_map.clear()
         self.elastic_gradient_map = [0 for i in range(vertices_num)]
         for e in range(elements_num):
-            finite_element = self.undeformed.finite_elements[e]
+            # finite_element = self.undeformed.finit   e_elements[e]
             element = self.undeformed.elements[e]
             self.elastic_gradient_map[e] = []
             for i in range(4):
@@ -119,7 +134,8 @@ class DeformableSimulator:
                 for j in range(4):
                     local_position[i, j] = position[i, element[j]]
             F = local_position @ basis_derivatives_q
-            energy += self.material[e].ComputeEnergyDensity(F) * finite_element.geometry_info[3][0].measure
+            energy += ComputeEnergyDensity(F,self.material[e].lam,self.material[e].mu)* finite_element.geometry_info[3][0].measure
+            # energy += self.material[e].ComputeEnergyDensity(F) * finite_element.geometry_info[3][0].measure
         return energy
     
     @ti.func
@@ -140,7 +156,8 @@ class DeformableSimulator:
                 for j in range(4):
                     local_position[i, j] = position[i, element[j]]
             F = local_position @ basis_derivatives_q
-            P = self.material[e].ComputeStressDensity(F)
+            P = ComputeStressDensity(F,self.material[e].lam,self.material[e].mu)
+            # P = self.material[e].ComputeStressDensity(F)
             gradient[e] = P @ basis_derivatives_q.transpose() * finite_element.geometry_info[3][0].measure
         force = ti.Matrix(n=vertices_num, m=3, dtype=ti.f32)
         for i in range(vertices_num):
