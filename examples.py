@@ -1,6 +1,6 @@
 import numpy as np
 import taichi as ti
-ti.init(arch=ti.cpu)
+ti.init(arch=ti.cuda)
 from deformable import DeformableSimulator
 simulator = DeformableSimulator(4,2)
 init_vertices = ti.Vector.field(n=3,dtype=ti.f32,shape=4)
@@ -15,7 +15,7 @@ init_elements = ti.Vector([[[1.,0.,0.],[0.,0.,0.],[0.,1.,0.],[0.,0.,1.]],
                     [[1.,0.,5.],[0.,0.,5.],[0.,1.,5.],[0.,0.,6.]]])
 init_elements_int = ti.Vector([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
 
-simulator.Initialize(init_vertices, init_elements_int, 1.0, 1.0, 1.0)
+simulator.Initialize(init_vertices, init_elements_int, 1e3, 1e5, 0.4)
 simulator.Forward(0.1)
 # finiteElementTypeDict = dict(
 #     vertices_num = ti.i32,

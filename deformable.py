@@ -70,20 +70,20 @@ class DeformableSimulator:
                         local_matrix[i, j] += w_ij
                         # print("AAAAAAAAAAAAAA")
                         # print(element)
-                        ti.activate(self.int_matrix, element[i], element[i])
+                        #ti.activate(self.int_matrix, [i, i])
                         self.int_matrix[element[i], element[i]] += w_ij
-                        ti.activate(self.int_density_matrix, element[i], element[i])
+                        #ti.activate(self.int_density_matrix,[i, i])
                         self.int_density_matrix[element[i], element[i]] += w_ij * self.material[e].density
                     else:
                         local_matrix[i, j] = w_ij
                         local_matrix[j, i] = w_ij
-                        ti.activate(self.int_matrix, element[i], element[j])
+                        #ti.activate(self.int_matrix, [i, j])
                         self.int_matrix[element[i], element[j]] += w_ij
-                        ti.activate(self.int_matrix, element[j], element[i])
+                        #ti.activate(self.int_matrix, [j, i])
                         self.int_matrix[element[j], element[i]] += w_ij
-                        ti.activate(self.int_density_matrix, element[i], element[j])
+                        #ti.activate(self.int_density_matrix, [i, j])
                         self.int_density_matrix[element[i], element[j]] += w_ij * self.material[e].density
-                        ti.activate(self.int_density_matrix, element[j], element[i])
+                        #ti.activate(self.int_density_matrix, [j, i])
                         self.int_density_matrix[element[j], element[i]] += w_ij * self.material[e].density
 
 
@@ -109,7 +109,7 @@ class DeformableSimulator:
 
         # Build the elastic gradient map
         self.elastic_gradient_map.clear()
-        self.elastic_gradient_map = [0 for i in range(vertices_num)]
+        self.elastic_gradient_map = [[] for i in range(vertices_num)]
         for e in range(elements_num):
             # finite_element = self.undeformed.finit   e_elements[e]
             element = self.undeformed.elements[e]
