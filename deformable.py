@@ -6,7 +6,7 @@ import numpy as np
 from domain import Domain, IntegratePoly
 from material import Material
 from material import materialTypeDict, ComputeEnergyDensity, ComputeStressDensity
-
+from copy import deepcopy
 
 ti.init(arch=ti.cuda)
 
@@ -35,11 +35,15 @@ class DeformableSimulator:
         self.vertices_num = vertices_num
         self.element_num = element_num
         self.free_vertex = ti.Matrix([[0, 0, 0] for i in range(self.vertices_num)])
+        self.free_vertex_vector_field = ti.Vector.field(n=3, dtype=ti.i32, shape=vertices_num)
         self.dirichlet_vertex = ti.Matrix([[0, 0, 0] for i in range(self.vertices_num)])
         self.dirichlet_value = ti.Matrix([[0.0, 0.0, 0.0] for i in range(self.vertices_num)])
         self.h = ti.field(dtype=ti.float32, shape=())
-        self.x0_np = np.array([0 for i in range(self.vertices_num * 3)])
-        self.x0_next_np = self.x0_np
+        self.x0_np = ti.Matrix([[0., 0., 0.] for i in range(self.vertices_num)])
+        
+        # np.array([0 for i in range(self.vertices_num * 3)])
+        self.x0_next_np = deepcopy(self.x0_np)
+        self.res = deepcopy(self.x0_np)
         self.elastic_gradient = ti.Matrix.field(n=3, m=4, dtype=ti.f32, shape=self.undeformed.elements_num)
 
     @ti.kernel
@@ -138,9 +142,11 @@ class DeformableSimulator:
             for d in range(3):
                 if self.dirichlet_boundary_condition[i][d] == float('inf'):
                     self.free_vertex[i, d] = 1
+                    self.free_vertex_vector_field[i][d] = 1
                     self.dirichlet_vertex[i, d] = 0
                 else:
                     self.free_vertex[i, d] = 0
+                    self.free_vertex_vector_field[i][d] = 0
                     self.dirichlet_vertex[i, d] = 1
                     self.dirichlet_value[i, d] = self.dirichlet_boundary_condition[i][d]
 
@@ -159,7 +165,7 @@ class DeformableSimulator:
                     basis_derivatives_q[i, j] = finite_element.polynomials[i, j]
             for i in range(3):
                 for j in range(4):
-                    local_position[i, j] = position[i][element[j]]
+                    local_position[i, j] = position[i,element[j]]
             F = local_position @ basis_derivatives_q
             energy += ComputeEnergyDensity(F,self.material[e].lam,self.material[e].mu)* finite_element.geometry_info_measure[3, 0]
             # energy += self.material[e].ComputeEnergyDensity(F) * finite_element.geometry_info[3][0].measure
@@ -180,7 +186,7 @@ class DeformableSimulator:
                     basis_derivatives_q[i, j] = finite_element.polynomials[i, j]
             for i in range(3):
                 for j in range(4):
-                    local_position[i, j] = position[i][element[j]]
+                    local_position[i, j] = position[i,element[j]]
             F = local_position @ basis_derivatives_q
             P = ComputeStressDensity(F,self.material[e].lam,self.material[e].mu)
             # P = self.material[e].ComputeStressDensity(F)
@@ -215,11 +221,11 @@ class DeformableSimulator:
         delta_1 = ti.Vector([0.0 for i in range(self.vertices_num)])
         delta_2 = ti.Vector([0.0 for i in range(self.vertices_num)])
         for i in range(vertices_num):
-            x_next_0 = position[i][0]
+            x_next_0 = position[i,0]
             y_0 = y[i, 0]
-            x_next_1 = position[i][1]
+            x_next_1 = position[i,1]
             y_1 = y[i, 1]
-            x_next_2 = position[i][2]
+            x_next_2 = position[i,2]
             y_2 = y[i, 2]
             delta_0[i] = x_next_0 - y_0
             delta_1[i] = x_next_1 - y_1
@@ -240,7 +246,7 @@ class DeformableSimulator:
         delta = ti.Matrix([[0.0 for i in range(3)] for j in range(self.vertices_num)])
         for i in range(vertices_num):
             for d in range(3):
-                x_next_d = position[i][d]
+                x_next_d = position[i,d]
                 y_d = (self.position[i][d] + self.velocity[i][d] * time_step + self.external_acceleration[i][d] * time_step * time_step)
                 delta[i, d] = x_next_d - y_d
         kinetic_gradient = self.int_density_matrix[None] @ delta
@@ -273,30 +279,59 @@ class DeformableSimulator:
                 g1_np[i * 3 + d] = g1[i, d]
         return g1_np
     
-    @ti.kernel
+    @ti.func
     def Optimizer(self):
-        inv_h = 1 / self.h[None]       
-        max_iter = 100
-        ftol = 1e-10
-        energy = self.ComputeEnergy(self.position, self.h[None]) 
-        energy_gradient = self.ComputeEnergyGradient(self.position, self.h[None])
-        res = scipy.optimize.minimize(self.E, self.x0_np, method="L-BFGS-B", jac=self.E_gradient, options={ "ftol": ftol, "maxiter": max_iter, "iprint": -1 })
-        for i in range(self.vertices_num):
-            for d in range(3):
-                if self.free_vertex[i, d] == 1:
-                    self.next_position[i][d] = res.x[i, d]
-                    self.next_velocity[i][d] = (self.next_position[i][d] - self.position[i][d]) * inv_h
-                else:
-                    self.next_position[i][d] = self.dirichlet_value[i, d]
-                    self.next_velocity[i][d] = 0.0
+        
+        # res = scipy.optimize.minimize(self.E, self.x0_np, method="L-BFGS-B", jac=self.E_gradient, options={ "ftol": ftol, "maxiter": max_iter, "iprint": -1 })
+        return self.minimizer(self.x0_np)
+        
 
+    @ti.func
+    def minimizer(self,init_pos:ti.template()):
+        options = dict(
+            ftol = 1e-20,
+            maxiter = 600,
+        )
+        ftol = options["ftol"]
+        maxiter = options["maxiter"]
+        # assert method in ["Adam"]
+        b1 = 0.9
+        b2 = 0.99
+        lr = 1e-2
+        m = self.ComputeEnergyGradient(init_pos,self.h[None])
+        v = m**2
+        old_pos = deepcopy(init_pos)
+        new_pos = deepcopy(init_pos)
+        
+        ti.loop_config(serialize=True)
+        for _ in range(maxiter):
+            old_E = self.ComputeEnergy(old_pos, self.h[None]) 
+            m += -m + b1 * m + (1-b1) * self.ComputeEnergyGradient(init_pos,self.h[None])
+            v += -v + b2 * v + (1-b2) * self.ComputeEnergyGradient(init_pos,self.h[None])**2
+            new_pos -= lr*m / (v**0.5 + 1e-13)
+            new_E = self.ComputeEnergy(new_pos, self.h[None]) 
+            old_pos -= lr*m / (v**0.5 + 1e-13)
+            if abs(new_E-old_E)/abs(old_E) < ftol:
+                break
+            if abs(new_E-old_E) < ftol:
+                break
+        return new_pos
 
+    
+    
+    
     def Forward(self, time_step: ti.f32):
+        for i in ti.ndrange(self.vertices_num):
+            for d in ti.ndrange(3):
+                self.x0_np[i,d] = self.position[i][d]
+                self.x0_next_np[i,d] = self.next_position[i][d]
+        self.kernel_Forward(time_step)
+        
+    @ti.kernel
+    def kernel_Forward(self, time_step: ti.f32):
+        # print(self.position)
         self.h[None] = time_step  
-        for i in range(self.vertices_num):
-            for d in range(3):
-                self.x0_np[i * 3 + d] = self.position[i][d]
-                self.x0_next_np[i * 3 + d] = self.next_position[i][d]
+        
           
         # Optimize
         '''
@@ -316,4 +351,13 @@ class DeformableSimulator:
                     self.next_position[i][d] = self.dirichlet_value[i, d]
                     self.next_velocity[i][d] = 0.0
         '''
-        self.Optimizer()
+        res = self.Optimizer()
+        inv_h = 1 / self.h[None]
+        for i in range(self.vertices_num):
+            for d in range(3):
+                if self.free_vertex_vector_field[i][d] == 1:
+                    self.next_position[i][d] = res[i, d]
+                    self.next_velocity[i][d] = (self.next_position[i][d] - self.position[i][d]) * inv_h
+                else:
+                    self.next_position[i][d] = self.dirichlet_boundary_condition[i][d]
+                    self.next_velocity[i][d] = 0.0
