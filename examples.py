@@ -25,11 +25,11 @@ simulator.position[3] = ti.Vector([0.0, 0.0, 2.0])
 
 element_np = simulator.undeformed.elements.to_numpy()
 folder = Path("./") / "results"
+create_folder(folder, exist_ok=True)
 np.save(folder / "elements.npy", element_np)
 position_0 = simulator.position.to_numpy()
 print(position_0)
 np.save(folder / "0000.npy", position_0)
-create_folder(folder, exist_ok=True)
 for i in range(10):
     simulator.Forward(0.1)
     position_np = simulator.position.to_numpy()

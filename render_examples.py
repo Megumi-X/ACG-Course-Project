@@ -25,8 +25,8 @@ def render_data(image_name, obj):
     spp = 64
 
     r = PbrtRenderer()
-    eye = to_real_array([2.0, 0.0, 2.0])
-    look_at = to_real_array([0.0, 0.0, 0.0])
+    eye = to_real_array([5.0, -1.0, 1.0])
+    look_at = to_real_array([0.0, 0.0, 1.0])
     eye = look_at + 0.8 * (eye - look_at)
     r.set_camera(eye=eye, look_at=look_at, up=[0, 0, 1], fov=45)
     r.add_infinite_light({
@@ -38,7 +38,7 @@ def render_data(image_name, obj):
     # If you use tet meshes, this step can be simplified by calling tet2obj from tet_mesh.
     vertices, elements = tet2obj(obj[0], obj[1])
     
-    r.add_triangle_mesh(vertices, elements, None, None, ("diffuse", { "rgb reflectance": (0.5, 0.5, 0.5) }))
+    r.add_triangle_mesh(vertices, elements, None, None, ("diffuse", { "rgb reflectance": (0.1, 0.4, 0.7) }))
 
     # The real rendering job starts here.
     r.set_image(pixel_samples=spp, file_name=image_name,
