@@ -50,11 +50,11 @@ def main():
     render_folder = Path(root) / "render_results"
     create_folder(render_folder, exist_ok=True)
 
-    for f in range(0, 250 + 1):
+    for f in range(0, 50):
         obj = (np.load(data_folder / "{:04d}.npy".format(f)), np.load(data_folder / "elements.npy"))
         render_data(render_folder / "{:04d}.png".format(f), obj)
 
-    export_gif(render_folder, render_folder / "result.gif", 30, "", ".png")
+    export_gif(render_folder, render_folder / "result.gif", 1, "", ".png")
 
 if __name__ == "__main__":
     main()

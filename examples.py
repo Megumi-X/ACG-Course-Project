@@ -21,8 +21,8 @@ init_vertices[3] = ti.Vector([0.0, 0.0, 1.0])
 init_elements = ti.Vector.field(n=4,dtype=ti.i32,shape=1)
 init_elements[0] = ti.Vector([0,1,2,3])
 
-simulator.Initialize(init_vertices, init_elements, 1e3, 1e5, 0.4)
-simulator.position[3] = ti.Vector([0.0, 0.0, 1.5])
+simulator.Initialize(init_vertices, init_elements, 1e3, 1e4, 0.3)
+simulator.position[3] = ti.Vector([0.0, 0.0, 2.0])
 
 element_np = simulator.undeformed.elements.to_numpy()
 folder = Path("./") / "results"
@@ -31,13 +31,20 @@ np.save(folder / "elements.npy", element_np)
 position_0 = simulator.position.to_numpy()
 np.save(folder / "0000.npy", position_0)
 
-for i in tqdm(range(1)):
-    simulator.Forward(0.1)
-    simulator.position = simulator.next_position
-    simulator.velocity = simulator.next_velocity
-    print(simulator.position)
-    position_np = simulator.position.to_numpy()
-    np.save(folder / "{:04d}.npy".format(i + 1), position_np)
+#for i in tqdm(range(2)):
+simulator.Forward(0.01)
+simulator.position = simulator.next_position
+simulator.velocity = simulator.next_velocity
+print(simulator.position)
+print(simulator.velocity)
+print("FINAL")
+simulator.Forward(0.01)
+simulator.position = simulator.next_position
+simulator.velocity = simulator.next_velocity
+print(simulator.position)
+print(simulator.velocity)
+position_np = simulator.position.to_numpy()
+np.save(folder / "{:04d}.npy".format(i + 1), position_np)
 
     
 
