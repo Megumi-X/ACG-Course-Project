@@ -14,7 +14,7 @@ import shutil
 from tet_mesh import to_real_array, to_integer_array
 root = "./"
 
-np_real = np.float64
+np_real = np.float32
 np_integer = np.int32
 
 def create_folder(folder_name, exist_ok):

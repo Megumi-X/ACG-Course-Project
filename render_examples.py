@@ -6,6 +6,7 @@ import numpy as np
 root = "./"
 from pbrt_renderer import create_folder, to_real_array
 from pbrt_renderer import PbrtRenderer
+from tet_mesh import tet2obj
 import imageio
 
 def export_gif(folder_name, gif_name, fps, name_prefix, name_suffix):
@@ -20,12 +21,12 @@ def export_gif(folder_name, gif_name, fps, name_prefix, name_suffix):
     else:
         imageio.mimsave(gif_name, images)
 
-def render_data(image_name, obj, f, frame_count):
+def render_data(image_name, obj):
     spp = 64
 
     r = PbrtRenderer()
-    eye = to_real_array([0.5, 0.5, 0.5])
-    look_at = to_real_array([0.0, 0.0, -0.2])
+    eye = to_real_array([2.0, 0.0, 2.0])
+    look_at = to_real_array([0.0, 0.0, 0.0])
     eye = look_at + 0.8 * (eye - look_at)
     r.set_camera(eye=eye, look_at=look_at, up=[0, 0, 1], fov=45)
     r.add_infinite_light({
@@ -35,30 +36,14 @@ def render_data(image_name, obj, f, frame_count):
 
     # Convert voxels into surface triangle meshes.
     # If you use tet meshes, this step can be simplified by calling tet2obj from tet_mesh.
-    elements = []
-    for i0, i1, i2, i3, i4, i5, i6, i7 in obj[1]:
-        # This is a naive implementation that does not remove duplicated faces.
-        elements.append([i0, i1, i2])
-        elements.append([i1, i3, i2])
-        elements.append([i4, i6, i5])
-        elements.append([i5, i6, i7])
-        elements.append([i0, i4, i5])
-        elements.append([i0, i5, i1])
-        elements.append([i2, i7, i6])
-        elements.append([i2, i3, i7])
-        elements.append([i1, i5, i7])
-        elements.append([i1, i7, i3])
-        elements.append([i0, i6, i4])
-        elements.append([i0, i2, i6])
-    i = 0
-    for element in elements: 
-        r.add_triangle_mesh(obj[0], element, None, None, ("diffuse", { "rgb reflectance": {0.5, 0.5, 0.5} }))
-        i += 1
+    vertices, elements = tet2obj(obj[0], obj[1])
+    
+    r.add_triangle_mesh(vertices, elements, None, None, ("diffuse", { "rgb reflectance": (0.5, 0.5, 0.5) }))
 
     # The real rendering job starts here.
     r.set_image(pixel_samples=spp, file_name=image_name,
         resolution=[600, 600])
-    r.render(use_gpu="PBRT_OPTIX7_PATH" in os.environ)
+    r.render(use_gpu=True)
 
 def main():
     data_folder = Path(root) / "results"
@@ -67,7 +52,7 @@ def main():
 
     for f in range(0, 250 + 1):
         obj = (np.load(data_folder / "{:04d}.npy".format(f)), np.load(data_folder / "elements.npy"))
-        render_data(render_folder / "{:04d}.png".format(f), obj, f, 500)
+        render_data(render_folder / "{:04d}.png".format(f), obj)
 
     export_gif(render_folder, render_folder / "result.gif", 30, "", ".png")
 

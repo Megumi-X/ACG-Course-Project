@@ -159,7 +159,7 @@ class DeformableSimulator:
                     basis_derivatives_q[i, j] = finite_element.polynomials[i, j]
             for i in range(3):
                 for j in range(4):
-                    local_position[i, j] = position[i][element[j]]
+                    local_position[i, j] = position[i, element[j]]
             F = local_position @ basis_derivatives_q
             energy += ComputeEnergyDensity(F,self.material[e].lam,self.material[e].mu)* finite_element.geometry_info_measure[3, 0]
             # energy += self.material[e].ComputeEnergyDensity(F) * finite_element.geometry_info[3][0].measure
@@ -180,7 +180,7 @@ class DeformableSimulator:
                     basis_derivatives_q[i, j] = finite_element.polynomials[i, j]
             for i in range(3):
                 for j in range(4):
-                    local_position[i, j] = position[i][element[j]]
+                    local_position[i, j] = position[i, element[j]]
             F = local_position @ basis_derivatives_q
             P = ComputeStressDensity(F,self.material[e].lam,self.material[e].mu)
             # P = self.material[e].ComputeStressDensity(F)
@@ -215,11 +215,11 @@ class DeformableSimulator:
         delta_1 = ti.Vector([0.0 for i in range(self.vertices_num)])
         delta_2 = ti.Vector([0.0 for i in range(self.vertices_num)])
         for i in range(vertices_num):
-            x_next_0 = position[i][0]
+            x_next_0 = position[i, 0]
             y_0 = y[i, 0]
-            x_next_1 = position[i][1]
+            x_next_1 = position[i, 1]
             y_1 = y[i, 1]
-            x_next_2 = position[i][2]
+            x_next_2 = position[i, 2]
             y_2 = y[i, 2]
             delta_0[i] = x_next_0 - y_0
             delta_1[i] = x_next_1 - y_1
@@ -240,7 +240,7 @@ class DeformableSimulator:
         delta = ti.Matrix([[0.0 for i in range(3)] for j in range(self.vertices_num)])
         for i in range(vertices_num):
             for d in range(3):
-                x_next_d = position[i][d]
+                x_next_d = position[i, d]
                 y_d = (self.position[i][d] + self.velocity[i][d] * time_step + self.external_acceleration[i][d] * time_step * time_step)
                 delta[i, d] = x_next_d - y_d
         kinetic_gradient = self.int_density_matrix[None] @ delta
