@@ -21,10 +21,10 @@ class Domain:
     def Initialize(self, vertices, elements):
         for iii in range(self.vertices_num):
             for jjj in range(3):
-                self.vertices[iii][jjj] = vertices[iii,jjj]
-        for iii in range(self.vertices_num):
-            for jjj in range(4):
-                self.elements[iii][jjj] = elements[iii,jjj]
+                self.vertices[iii][jjj] = vertices[iii][jjj]
+        #for iii in range(self.elements_num):
+            #for jjj in range(4):
+        self.elements = elements
         for i in range(self.elements_num):
             v0 = self.vertices[self.elements[i][0]]
             print(v0)
