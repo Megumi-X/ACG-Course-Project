@@ -2,6 +2,7 @@ import numpy as np
 from pathlib import Path
 from pbrt_renderer import create_folder, to_real_array
 import taichi as ti
+from tqdm import tqdm
 ti.init(arch=ti.cuda)
 from deformable import DeformableSimulator
 simulator = DeformableSimulator(4,1)
@@ -21,19 +22,23 @@ init_elements = ti.Vector.field(n=4,dtype=ti.i32,shape=1)
 init_elements[0] = ti.Vector([0,1,2,3])
 
 simulator.Initialize(init_vertices, init_elements, 1e3, 1e5, 0.4)
-simulator.position[3] = ti.Vector([0.0, 0.0, 2.0])
+simulator.position[3] = ti.Vector([0.0, 0.0, 1.5])
 
 element_np = simulator.undeformed.elements.to_numpy()
 folder = Path("./") / "results"
 create_folder(folder, exist_ok=True)
 np.save(folder / "elements.npy", element_np)
 position_0 = simulator.position.to_numpy()
-print(position_0)
 np.save(folder / "0000.npy", position_0)
-for i in range(10):
+
+for i in tqdm(range(1)):
     simulator.Forward(0.1)
+    simulator.position = simulator.next_position
+    simulator.velocity = simulator.next_velocity
+    print(simulator.position)
     position_np = simulator.position.to_numpy()
     np.save(folder / "{:04d}.npy".format(i + 1), position_np)
+
     
 
 # finiteElementTypeDict = dict(

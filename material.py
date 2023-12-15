@@ -70,6 +70,9 @@ class Material:
 def ComputeEnergyDensity(F:ti.types.matrix(3,3,ti.f32),lam:ti.f32, mu:ti.f32):
     C = F.transpose() @ F
     J = F.determinant()
+    print(F)
+    print(C)
+    print(J)
     Ic = C[0, 0] + C[1, 1] + C[2, 2]
     delta = 1
     dim = 3

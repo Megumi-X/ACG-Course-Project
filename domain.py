@@ -19,25 +19,22 @@ class Domain:
         }, shape=(4,6))
 
     def Initialize(self, vertices, elements):
-        for iii in range(self.vertices_num):
-            for jjj in range(3):
-                self.vertices[iii][jjj] = vertices[iii][jjj]
+        self.vertices = vertices
         #for iii in range(self.elements_num):
             #for jjj in range(4):
         self.elements = elements
         for i in range(self.elements_num):
             v0 = self.vertices[self.elements[i][0]]
-            print(v0)
             v1 = self.vertices[self.elements[i][1]]
             v2 = self.vertices[self.elements[i][2]]
             v3 = self.vertices[self.elements[i][3]]
             self.finite_elements[i].vertices_num = 4
-            for ii in range(4):
-                self.finite_elements[i].vertices[0,i] = v0[i]
-                self.finite_elements[i].vertices[1,i] = v1[i]
-                self.finite_elements[i].vertices[2,i] = v2[i]
-                self.finite_elements[i].vertices[3,i] = v3[i]
-            
+            for ii in range(3):
+                self.finite_elements[i].vertices[0,ii] = v0[ii]
+                self.finite_elements[i].vertices[1,ii] = v1[ii]
+                self.finite_elements[i].vertices[2,ii] = v2[ii]
+                self.finite_elements[i].vertices[3,ii] = v3[ii]
+            #print(self.finite_elements[i].vertices)
             volume = np.dot(np.cross((v1 - v0),(v2 - v1)),(v3 - v2)) / 6
             order = ti.Vector([0,0,0,0])
             if volume < 0 :
@@ -60,7 +57,6 @@ class Domain:
                     self.finite_elements[i].geometry_info_vertices_num[1,edge_index] = 2
                     self.finite_elements[i].geometry_info_vertex_indices_1[edge_index,0] = ii
                     self.finite_elements[i].geometry_info_vertex_indices_1[edge_index,1] = jj
-                    print(self.finite_elements[i].vertices)
                     M = self.finite_elements[i].vertices.m
                     self.finite_elements[i].geometry_info_measure[1,edge_index] = (ti.Vector([self.finite_elements[i].vertices[ii,jjj] for jjj in range(M)]) - ti.Vector([self.finite_elements[i].vertices[jj,jjj] for jjj in range(M)])).norm()
                     edge_index += 1
@@ -104,18 +100,12 @@ class Domain:
                 A[3, ii] = 1.0
             
             A_inv = A.inverse()
-            for i in range(4):
-                self.finite_elements[i].polynomials[i,0] = A_inv[i, 0]
-                self.finite_elements[i].polynomials[i,1] = A_inv[i, 1]
-                self.finite_elements[i].polynomials[i,2] = A_inv[i, 2]
-                self.finite_elements[i].polynomials[i,3] = A_inv[i, 3]
-            
-                    
-                    
-                    
-                    
-                    
-                    
+            for index in range(4):
+                self.finite_elements[i].polynomials[index,0] = A_inv[index, 0]
+                self.finite_elements[i].polynomials[index,1] = A_inv[index, 1]
+                self.finite_elements[i].polynomials[index,2] = A_inv[index, 2]
+                self.finite_elements[i].polynomials[index,3] = A_inv[index, 3]
+                                
                     
             # self.finite_elements[i].Initialize(self.elements[i, 0], self.elements[i, 1], self.elements[i, 2], self.elements[i, 3])
 
