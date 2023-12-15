@@ -2,7 +2,7 @@ import taichi as ti
 
 # Here we use neo-Hookean model
 
-@ti.kernel
+@ti.func
 def DeterminantGrad(A: ti.types.matrix(3, 3, ti.f32)) -> ti.types.matrix(3, 3, ti.f32):
     dJdA = ti.Matrix([[0.0 for i in range(3)] for j in range(3)])
     dJdA[0, 0] = A[1, 1] * A[2, 2] - A[1, 2] * A[2, 1]
@@ -66,7 +66,7 @@ class Material:
         dJdF = DeterminantGrad(F)
         return (1 - 1 / (Ic + delta)) * mu * F + la * (J - alpha) * dJdF
 
-@ti.kernel
+@ti.func
 def ComputeEnergyDensity(F:ti.types.matrix(3,3,ti.f32),lam:ti.f32, mu:ti.f32):
     C = F.transpose() @ F
     J = F.determinant()
@@ -76,7 +76,7 @@ def ComputeEnergyDensity(F:ti.types.matrix(3,3,ti.f32),lam:ti.f32, mu:ti.f32):
     alpha = (1 - 1 / (dim + delta)) * mu / lam + 1
     return mu / 2 * (Ic - dim) + lam / 2 * (J - alpha) * (J - alpha) - 0.5 * mu * ti.log(Ic + delta)
 
-@ti.kernel
+@ti.func
 def ComputeStressDensity(F:ti.types.matrix(3,3,ti.f32),lam:ti.f32, mu:ti.f32):
     C = F.transpose() @ F
     J = F.determinant()
