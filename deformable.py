@@ -7,7 +7,7 @@ from domain import Domain, IntegratePoly
 from material import Material
 from material import materialTypeDict, ComputeEnergyDensity, ComputeStressDensity
 
-HISTORY_SIZE = 3
+HISTORY_SIZE = 10
 N=90
 alpha_field = ti.field(dtype=ti.f32, shape=(N))
 for i in range(N):
@@ -227,6 +227,9 @@ class DeformableSimulator:
         self.dot_y_s = ti.field(dtype=ti.f64,shape = (HISTORY_SIZE))
         self.alpha_field = ti.field(dtype=ti.f64,shape=(HISTORY_SIZE))
         
+        self.m_field = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
+        self.v_field = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
+        
 
 
     @ti.kernel
@@ -398,7 +401,7 @@ class DeformableSimulator:
     def ComputeEnergy(self, position, time_step) -> float:
         # sum_ = 0.0
         # for i,j in ti.ndrange(self.vertices_num,3):
-        #     sum_ += (position[i,j]-100)**2
+        #     sum_ += (position[i,j]-1)**2
         # return sum_
         vertices_num = self.vertices_num
         inv_h = 1 / time_step
@@ -438,7 +441,7 @@ class DeformableSimulator:
     @ti.func
     def ComputeEnergyGradient(self, position, time_step):
         # for i,j in ti.ndrange(self.vertices_num, 3):
-        #     self.energy_gradient[i,j] = 2*(position[i,j]-100)
+        #     self.energy_gradient[i,j] = 2*(position[i,j]-1)
         # return
         for i, j in ti.ndrange(self.vertices_num, 3):
             self.kinetic_gradient[i, j] = 0
@@ -499,11 +502,60 @@ class DeformableSimulator:
     #     #print("x0_np: ", self.x0_np[None][0,0])
     #     return self.minimizer_LBFGS()
     
+    @ti.func
+    def minimizer_Adam(self):
+        ftol = 1e-3
+        maxiter = 5000
+        b1 = 0.9
+        b2 = 0.99
+        lr = 1e-2
+        self.ComputeEnergyGradient(self.x0_np, self.h[None])
+        copy_fields_2d(self.energy_gradient, self.m_field, self.vertices_num, 3)
+        copy_fields_2d_square(self.energy_gradient, self.v_field, self.vertices_num, 3)
+        
+        
+        
+        
+        counter = 0
+        
+        ti.loop_config(serialize=True)
+        for _ in range(maxiter):
+            if counter >= 1:
+                current_energy = self.ComputeEnergy(self.x0_next_np, self.h[None])
+                # print(f"Current counter is {counter}, current energy is {current_energy}")
+                
+                # print("Current diff:", compute_difference_norm_2d(self.x0_next_np, self.x0_np, self.vertices_num, 3))
+                if compute_difference_norm_2d(self.x0_next_np, self.x0_np, self.vertices_num, 3) < ftol:
+                    # print("! Uses", counter, "iterations to converge")
+                    break
+            if counter > maxiter - 1:
+                # print("Current diff:", compute_difference_norm_2d(self.x0_next_np, self.x0_np, self.vertices_num, 3))
+                print("Fatal Warning: minimizer did not converge")
+                break
+            
+            
+            counter += 1
+            copy_fields_2d(self.x0_next_np, self.x0_np, self.vertices_num, 3)
+            old_E = self.ComputeEnergy(self.x0_np, self.h[None])
+            self.update_m_v_adam(b1,b2,lr)
+            
+            counter += 1
+            
+            
+        
+        
+        
     
     
     
     
-    
+    @ti.func
+    def update_m_v_adam(self,b1:ti.f64,b2:ti.f64,lr:ti.f64):
+        EPSILON = 1e-30
+        for i,j in ti.ndrange(self.vertices_num,3):
+            self.m_field[i,j] = b1 * self.m_field[i,j] + (1-b1) * self.energy_gradient[i,j]
+            self.v_field[i,j] = b2 * self.v_field[i,j] + (1-b2) * self.energy_gradient[i,j] * self.energy_gradient[i,j]
+            self.x0_next_np[i,j] -= lr * self.m_field[i,j] / (self.v_field[i,j]**0.5 + EPSILON)
     
     @ti.func
     def minimizer_LBFGS(self):
@@ -588,7 +640,7 @@ class DeformableSimulator:
         for idx in range(N):
             current_alpha = alpha_field[idx]
             compute_add_with_mult_2d(self.x0_np, self.step_direction, current_alpha, self.x0_np_added, self.vertices_num, 3)
-            if compute_difference_norm_2d(self.x0_np,self.x0_next_np,self.n,3) < self.n:
+            if compute_difference_norm_2d(self.x0_np,self.x0_next_np,self.n,3) < self.n: # bound norm(delta) to self.n
                 current_E = self.ComputeEnergy(self.x0_np_added, self.h[None])
                 if current_E <= current_min:
                     current_index *= 0
@@ -799,7 +851,7 @@ class DeformableSimulator:
                     self.next_velocity[i][d] = 0.0
         '''
         #print("x0_np: ", self.x0_np[None][0,0])
-        self.minimizer_LBFGS()
+        self.minimizer_Adam()
         inv_h = 1 / self.h[None]
         for i in range(self.vertices_num):
             for d in range(3):
