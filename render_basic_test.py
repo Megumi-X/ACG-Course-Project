@@ -46,11 +46,11 @@ def render_data(image_name, obj):
     r.render(use_gpu=True)
 
 def main():
-    data_folder = Path(root) / "results"
-    render_folder = Path(root) / "render_results"
+    data_folder = Path(root) / "basic_test"
+    render_folder = Path(root) / "render_basic_test"
     create_folder(render_folder, exist_ok=True)
 
-    for f in range(0, 50):
+    for f in range(0, 500):
         obj = (np.load(data_folder / "{:04d}.npy".format(f)), np.load(data_folder / "elements.npy"))
         render_data(render_folder / "{:04d}.png".format(f), obj)
 

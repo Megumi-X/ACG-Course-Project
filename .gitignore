@@ -172,3 +172,5 @@ cython_debug/
 
 results/*
 render_results/*
+basic_test/*
+simple_cloth/*

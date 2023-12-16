@@ -3,26 +3,34 @@ from finite_element import FiniteElement
 from finite_element import finiteElementTypeDict, GeometryShape, IntegratePoly
 from finite_element import GeometryShape
 import numpy as np
+@ti.func
+def copy_fields(src: ti.template(), dest: ti.template()):
+    for I in ti.grouped(src):
+        dest[I] = src[I]
+
 @ti.data_oriented
 class Domain:
     def __init__(self, vertices_num: ti.int32, elements_num: ti.int32):
         self.vertices_num = vertices_num
         self.elements_num = elements_num
-        self.vertices = ti.Vector.field(n=3, dtype=ti.f32, shape=self.vertices_num)
-        self.elements = ti.Vector.field(n=4, dtype=ti.int32, shape=self.elements_num)
-        self.finite_elements = ti.Struct.field(finiteElementTypeDict, shape=self.elements_num)
+        self.vertices = ti.Vector.field(n=3, dtype=ti.f64, shape=vertices_num)
+        self.elements = ti.Vector.field(n=4, dtype=ti.int32, shape=elements_num)
+        self.finite_elements = ti.Struct.field(finiteElementTypeDict, shape=elements_num)
         self.geometry_info = ti.Struct.field({
             'dim': ti.i32,
             'vertices_num': ti.i32,
             'vertex_indices': ti.types.vector(4, ti.i32),
-            'measure': ti.f32,
+            'measure': ti.f64,
         }, shape=(4,6))
 
-    def Initialize(self, vertices, elements):
-        self.vertices = vertices
-        #for iii in range(self.elements_num):
-            #for jjj in range(4):
-        self.elements = elements
+    @ti.kernel
+    def assign_v_e(self, vertices: ti.template(), elements: ti.template()):
+        copy_fields(vertices, self.vertices)
+        copy_fields(elements, self.elements)
+
+    def Initialize(self, vertices: ti.template(), elements: ti.template()):
+        self.assign_v_e(vertices, elements)
+        print("Starlight")
         for i in range(self.elements_num):
             v0 = self.vertices[self.elements[i][0]]
             v1 = self.vertices[self.elements[i][1]]
@@ -35,7 +43,8 @@ class Domain:
                 self.finite_elements[i].vertices[2,ii] = v2[ii]
                 self.finite_elements[i].vertices[3,ii] = v3[ii]
             #print(self.finite_elements[i].vertices)
-            volume = np.dot(np.cross((v1 - v0),(v2 - v1)),(v3 - v2)) / 6
+            volume = (v1 - v0).cross(v2 - v1).dot(v3 - v2) / 6    
+            #volume = ti.dot(np.cross((v1 - v0),(v2 - v1)),(v3 - v2)) / 6
             order = ti.Vector([0,0,0,0])
             if volume < 0 :
                 order += ti.Vector([0, 1, 2, 3])
@@ -84,7 +93,7 @@ class Domain:
                 v02 = self.finite_elements[i].geometry_info_vertex_indices_2[ii,2]
                 v001 = matrix_row_to_vec(self.finite_elements[i].vertices,v01) - matrix_row_to_vec(self.finite_elements[i].vertices,v00)
                 v002 = matrix_row_to_vec(self.finite_elements[i].vertices,v02) - matrix_row_to_vec(self.finite_elements[i].vertices,v00)
-                self.finite_elements[i].geometry_info_measure[2,i] = v001.cross(v002).norm() / 2
+                self.finite_elements[i].geometry_info_measure[2,ii] = v001.cross(v002).norm() / 2
             
             for jjj in range(4):
                 self.finite_elements[i].geometry_info_vertex_indices_3[0,jjj]= order[jjj]
@@ -92,7 +101,7 @@ class Domain:
             self.finite_elements[i].geometry_info_vertices_num[3,0] = 4
             self.finite_elements[i].geometry_info_measure[3,0] = volume
             
-            A = ti.Matrix([[0.0 for ii in range(self.vertices_num)] for jj in range(4)])
+            A = ti.Matrix([[0.0 for ii in range(4)] for jj in range(4)])
             for ii in range(4):
                 A[0, ii] = self.finite_elements[i].vertices[ii,0]
                 A[1, ii] = self.finite_elements[i].vertices[ii,1]
