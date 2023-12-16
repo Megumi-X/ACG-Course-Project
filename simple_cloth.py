@@ -8,9 +8,9 @@ from deformable import DeformableSimulator
 #import os
 #os.environ['TAICHI_MAX_NUM_SNODES'] = '10240000000'
 
-X = 3
-Y = 10
-dx = 0.1
+X = 1
+Y = 1
+dx = 1.
 vertices_num = (X + 1) * (Y + 1) * 2
 elements_num = X * Y * 6
 init_vertices = ti.Vector.field(n=3,dtype=ti.f64,shape=vertices_num)
@@ -38,15 +38,15 @@ for i in range(Y):
 
 print("Initializing...")
 simulator = DeformableSimulator(vertices_num, elements_num)
-simulator.Initialize(init_vertices, elements, 1e3, 1e5, 0.3)
+simulator.Initialize(init_vertices, elements, 1e3, 1e2, 0.3)
 print("Initialization finished.")
 
 for j in range(X + 1):
-    simulator.dirichlet_boundary_condition[2 * j] = ti.Vector([0.0, 0.0, 0.0])
-    simulator.dirichlet_boundary_condition[2 * j + 1] = ti.Vector([0.0, 0.0, dx])
+    simulator.dirichlet_boundary_condition[2 * j] = ti.Vector([-1., -1., -1.])
+    simulator.dirichlet_boundary_condition[2 * j + 1] = ti.Vector([3., 3., 3.])
 
 for index in range(simulator.vertices_num):
-    simulator.external_acceleration[index] = ti.Vector([0.0, 0.0, -9.8])
+    simulator.external_acceleration[index] = ti.Vector([0.0, 0.0, -0.0]) # no g
 
 element_np = simulator.undeformed.elements.to_numpy()
 folder = Path("./") / "simple_cloth"
@@ -56,6 +56,8 @@ position_0 = simulator.position.to_numpy()
 np.save(folder / "0000.npy", position_0)
 
 for i in tqdm(range(2000)):
+    position_np = simulator.position.to_numpy()
+    print("Current step is {} and current position is {}".format(i,position_np))
     simulator.Forward(0.01)
     position_np = simulator.position.to_numpy()
     np.save(folder / "{:04d}.npy".format(i + 1), position_np)

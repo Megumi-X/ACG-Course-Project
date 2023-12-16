@@ -3,7 +3,7 @@ from pathlib import Path
 from pbrt_renderer import create_folder, to_real_array
 import taichi as ti
 from tqdm import tqdm
-ti.init(arch=ti.cuda)
+ti.init(arch=ti.cpu)
 from deformable import DeformableSimulator
 simulator = DeformableSimulator(4,1)
 init_vertices = ti.Vector.field(n=3,dtype=ti.f64,shape=4)
@@ -31,7 +31,9 @@ np.save(folder / "elements.npy", element_np)
 position_0 = simulator.position.to_numpy()
 np.save(folder / "0000.npy", position_0)
 
-for i in tqdm(range(2000)):
+for i in tqdm(range(2)):
+    position_np = simulator.position.to_numpy()
+    print(f"current step {i}, current position {position_np}")
     simulator.Forward(0.01)
     position_np = simulator.position.to_numpy()
     np.save(folder / "{:04d}.npy".format(i + 1), position_np)

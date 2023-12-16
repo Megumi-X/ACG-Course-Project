@@ -120,7 +120,7 @@ class Domain:
 
         # Set geometry info
         # 0D
-        for i in range(self.vertices_num):
+        for i in range(6):
             self.geometry_info[0, i].dim = 0
             self.geometry_info[0, i].vertices_num = 1
             self.geometry_info[0, i].vertex_indicies = i
