@@ -170,7 +170,8 @@ cython_debug/
 *.dvi
 *.xcp
 
-results/*
-render_results/*
-basic_test/*
-simple_cloth/*
+results/
+render_results/
+basic_test/
+simple_cloth/
+render_simple_cloth/

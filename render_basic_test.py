@@ -25,7 +25,7 @@ def render_data(image_name, obj):
     spp = 64
 
     r = PbrtRenderer()
-    eye = to_real_array([5.0, -1.0, 1.0])
+    eye = to_real_array([7.0, -1.0, 1.0])
     look_at = to_real_array([0.0, 0.0, 1.0])
     eye = look_at + 0.8 * (eye - look_at)
     r.set_camera(eye=eye, look_at=look_at, up=[0, 0, 1], fov=45)

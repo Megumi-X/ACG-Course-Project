@@ -7,7 +7,7 @@ from domain import Domain, IntegratePoly
 from material import Material
 from material import materialTypeDict, ComputeEnergyDensity, ComputeStressDensity
 
-HISTORY_SIZE = 5
+HISTORY_SIZE = 10
 N=90
 alpha_field = ti.field(dtype=ti.f64, shape=(N))
 for i in range(N):
@@ -388,7 +388,6 @@ class DeformableSimulator:
             # P = self.material[e].ComputeStressDensity(F)
             self.elastic_gradient[e] = P @ basis_derivatives_q.transpose() * finite_element.geometry_info_measure[3, 0]
         #force = ti.Matrix([[0.0 for i in range(3)] for j in range(self.vertices_num)])
-        ti.loop_config(serialize=True)
         for i in (range(self.vertices_num)):
             num = 0
             for j in range(100):
@@ -509,7 +508,7 @@ class DeformableSimulator:
     
     @ti.func
     def minimizer_Adam(self,lr:ti.f64):
-        ftol = 1e-3
+        ftol = 1e-10
         maxiter = 20
         b1 = 0.9
         b2 = 0.99
@@ -557,8 +556,8 @@ class DeformableSimulator:
     
     @ti.func
     def minimizer_LBFGS(self):
-        maxiter = 10
-        ftol = 1e-15
+        maxiter = 40
+        ftol = 1e-10
         history_size = HISTORY_SIZE
         EPSILON = 1e-30
         counter = 0
@@ -573,8 +572,8 @@ class DeformableSimulator:
                     # print("! Uses", counter, "iterations to converge")
                     break
             if counter > maxiter - 1:
-                # print("Current diff:", compute_difference_norm_2d(self.x0_next_np, self.x0_np, self.vertices_num, 3))
-                # print("Fatal Warning: minimizer did not converge")
+                print("Current diff:", compute_difference_norm_2d(self.x0_next_np, self.x0_np, self.vertices_num, 3))
+                print("Fatal Warning: minimizer did not converge")
                 break
             
             copy_fields_2d(self.x0_next_np, self.x0_np, self.vertices_num, 3)

@@ -8,9 +8,9 @@ from deformable import DeformableSimulator
 #import os
 #os.environ['TAICHI_MAX_NUM_SNODES'] = '10240000000'
 
-X = 3
-Y = 10
-dx = 0.1
+X = 10
+Y = 30
+dx = 0.02
 vertices_num = (X + 1) * (Y + 1) * 2
 elements_num = X * Y * 6
 init_vertices = ti.Vector.field(n=3,dtype=ti.f64,shape=vertices_num)
@@ -38,15 +38,17 @@ for i in range(Y):
 
 print("Initializing...")
 simulator = DeformableSimulator(vertices_num, elements_num)
-simulator.Initialize(init_vertices, elements, 1e3, 1e6, 0.3)
+simulator.Initialize(init_vertices, elements, 1e3, 2e6, 0.3)
 print("Initialization finished.")
 
-for j in range(X + 1):
-    simulator.dirichlet_boundary_condition[2 * j] = simulator.position[2 * j]
-    simulator.dirichlet_boundary_condition[2 * j + 1] = simulator.position[2 * j + 1]
+# for j in range(X + 1):
+#     simulator.dirichlet_boundary_condition[2 * j] = simulator.position[2 * j]
+#     simulator.dirichlet_boundary_condition[2 * j + 1] = simulator.position[2 * j + 1]
 
+# @ti.kernel
+# def set_gravity():
 for index in range(simulator.vertices_num):
-    simulator.external_acceleration[index] = ti.Vector([0.0, 0.0, -9.8]) # no g
+    simulator.external_acceleration[index] = ti.Vector([0.0, 0.0, -9.8])
 
 element_np = simulator.undeformed.elements.to_numpy()
 folder = Path("./") / "simple_cloth"
@@ -55,9 +57,24 @@ np.save(folder / "elements.npy", element_np)
 position_0 = simulator.position.to_numpy()
 np.save(folder / "0000.npy", position_0)
 
-for i in tqdm(range(100)):
+# @ti.kernel
+# def set_force(a: ti.f64):
+#     for i, j in ti.ndrange(Y + 1, X + 1):
+#         mu = 0.5
+#         simulator.external_acceleration[(i*(X+1) + j)*2] = ti.Vector([0.0, 0.0, a * ti.exp(-mu * ti.abs(i - Y))])
+#         simulator.external_acceleration[(i*(X+1) + j)*2+1] = ti.Vector([0.0, 0.0, a * ti.exp(-mu * ti.abs(i - Y))])
+
+#set_gravity()
+print(simulator.external_acceleration.to_numpy())
+test_pos = ti.field(dtype=ti.f64,shape=(vertices_num,3))
+test_pos_1 = ti.field(dtype=ti.f64,shape=(vertices_num,3))
+test_pos_zero = ti.field(dtype=ti.f64,shape=(vertices_num,3))
+
+
+for f in tqdm(range(300)):
     position_np = simulator.position.to_numpy()
-    # print("Current step is {} and current position is {}".format(i,position_np))
-    simulator.Forward(0.1)
+    print("Current step is {} and current position is {}".format(f,position_np))
+    # set_force(ti.cos(f * 0.1) * 5)
+    simulator.Forward(0.01)
     position_np = simulator.position.to_numpy()
-    np.save(folder / "{:04d}.npy".format(i + 1), position_np)
+    np.save(folder / "{:04d}.npy".format(f + 1), position_np)
