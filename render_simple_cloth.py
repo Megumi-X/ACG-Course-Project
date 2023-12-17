@@ -3,6 +3,8 @@ import os
 
 import numpy as np
 
+from multiprocessing import Pool
+
 root = "./"
 from pbrt_renderer import create_folder, to_real_array
 from pbrt_renderer import PbrtRenderer
@@ -53,7 +55,8 @@ def render_data(image_name, obj):
     r.set_image(pixel_samples=spp, file_name=image_name,
         resolution=[600, 600])
     r.render(use_gpu=True)
-
+def render_data_wrapper(arg):
+    return render_data(arg[0],arg[1])
 def main():
     data_folder = Path(root) / "simple_cloth"
     render_folder = Path(root) / "render_simple_cloth"
@@ -61,7 +64,11 @@ def main():
 
     for f in range(0, 300):
         obj = (np.load(data_folder / "{:04d}.npy".format(f)), np.load(data_folder / "elements.npy"))
-        render_data(render_folder / "{:04d}.png".format(f), obj)
+        input_list.append((render_folder / "{:04d}.png".format(f), obj))
+    
+    # multiprocessing:
+    with Pool(processes=30) as pool:
+        pool.map(render_data_wrapper, input_list)
 
     export_gif(render_folder, render_folder / "result.gif", 1, "", ".png")
 
