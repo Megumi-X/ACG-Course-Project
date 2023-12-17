@@ -402,10 +402,10 @@ class DeformableSimulator:
 
     @ti.func
     def ComputeEnergy(self, position, time_step) -> float:
-        sum_ = 0.0
-        for i,j in ti.ndrange(self.vertices_num,3):
-            sum_ += (position[i,j]-1)**2
-        return sum_
+        # sum_ = 0.0
+        # for i,j in ti.ndrange(self.vertices_num,3):
+        #     sum_ += (position[i,j]-1)**2
+        # return sum_
         vertices_num = self.vertices_num
         inv_h = 1 / time_step
         coefficient = inv_h * inv_h / 2
@@ -443,9 +443,9 @@ class DeformableSimulator:
     
     @ti.func
     def ComputeEnergyGradient(self, position, time_step):
-        for i,j in ti.ndrange(self.vertices_num, 3):
-            self.energy_gradient[i,j] = 2*(position[i,j]-1)
-        return
+        # for i,j in ti.ndrange(self.vertices_num, 3):
+        #     self.energy_gradient[i,j] = 2*(position[i,j]-1)
+        # return
         for i, j in ti.ndrange(self.vertices_num, 3):
             self.kinetic_gradient[i, j] = 0
         vertices_num = self.vertices_num
