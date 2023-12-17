@@ -402,10 +402,10 @@ class DeformableSimulator:
 
     @ti.func
     def ComputeEnergy(self, position, time_step) -> float:
-        # sum_ = 0.0
-        # for i,j in ti.ndrange(self.vertices_num,3):
-        #     sum_ += (position[i,j]-1)**2
-        # return sum_
+        sum_ = 0.0
+        for i,j in ti.ndrange(self.vertices_num,3):
+            sum_ += (position[i,j]-1)**2
+        return sum_
         vertices_num = self.vertices_num
         inv_h = 1 / time_step
         coefficient = inv_h * inv_h / 2
@@ -437,15 +437,15 @@ class DeformableSimulator:
         # for iii, jjj in ti.ndrange(self.vertices_num, self.vertices_num):
         #     p2[iii] += self.int_density_matrix[iii, jjj] * delta_2[jjj]
         elastic_energy = self.ComputeElasticEnergy(position)
-        print("kinetic_energy: ", kinetic_energy)
-        print("elastic_energy: ", elastic_energy)
+        # print("kinetic_energy: ", kinetic_energy)
+        # print("elastic_energy: ", elastic_energy)
         return kinetic_energy + elastic_energy
     
     @ti.func
     def ComputeEnergyGradient(self, position, time_step):
-        # for i,j in ti.ndrange(self.vertices_num, 3):
-        #     self.energy_gradient[i,j] = 2*(position[i,j]-1)
-        # return
+        for i,j in ti.ndrange(self.vertices_num, 3):
+            self.energy_gradient[i,j] = 2*(position[i,j]-1)
+        return
         for i, j in ti.ndrange(self.vertices_num, 3):
             self.kinetic_gradient[i, j] = 0
         vertices_num = self.vertices_num
@@ -506,12 +506,12 @@ class DeformableSimulator:
     #     return self.minimizer_LBFGS()
     
     @ti.func
-    def minimizer_Adam(self):
+    def minimizer_Adam(self,lr:ti.f64):
         ftol = 1e-3
         maxiter = 5000
         b1 = 0.9
         b2 = 0.99
-        lr = 1e-4
+        
         self.ComputeEnergyGradient(self.x0_np, self.h[None])
         copy_fields_2d(self.energy_gradient, self.m_field, self.vertices_num, 3)
         copy_fields_2d_square(self.energy_gradient, self.v_field, self.vertices_num, 3)
@@ -540,6 +540,7 @@ class DeformableSimulator:
             counter += 1
             copy_fields_2d(self.x0_next_np, self.x0_np, self.vertices_num, 3)
             old_E = self.ComputeEnergy(self.x0_np, self.h[None])
+            self.ComputeEnergyGradient(self.x0_next_np, self.h[None])
             self.update_m_v_adam(b1,b2,lr)
             
             counter += 1               
@@ -829,6 +830,9 @@ class DeformableSimulator:
           
         # Optimize
         #print("x0_np: ", self.x0_np[None][0,0])
+        self.minimizer_Adam(1e-4)
+        self.minimizer_Adam(1e-5)
+        self.minimizer_Adam(1e-6)
         self.minimizer_LBFGS()
         inv_h = 1 / self.h[None]
         for i in range(self.vertices_num):
