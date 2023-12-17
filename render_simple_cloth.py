@@ -64,13 +64,7 @@ def main():
 
     for f in range(0, 300):
         obj = (np.load(data_folder / "{:04d}.npy".format(f)), np.load(data_folder / "elements.npy"))
-        input_list.append((render_folder / "{:04d}.png".format(f), obj))
-    
-    # multiprocessing:
-    with Pool(processes=30) as pool:
-        pool.map(render_data_wrapper, input_list)
-
-    export_gif(render_folder, render_folder / "result.gif", 1, "", ".png")
+        render_data(render_folder / "{:04d}.png".format(f), obj)
 
 if __name__ == "__main__":
     main()
