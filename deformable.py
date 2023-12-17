@@ -508,7 +508,7 @@ class DeformableSimulator:
     @ti.func
     def minimizer_Adam(self,lr:ti.f64):
         ftol = 1e-3
-        maxiter = 5000
+        maxiter = 1000
         b1 = 0.9
         b2 = 0.99
         
@@ -821,7 +821,12 @@ class DeformableSimulator:
         self.kernel_Forward(time_step)
         copy_fields(self.next_position, self.position)
         copy_fields(self.next_velocity, self.velocity)
-        
+    @ti.func
+    def Optimize(self):
+        self.minimizer_Adam(1e-5)
+        self.minimizer_Adam(1e-6)
+        self.minimizer_Adam(1e-7)
+        self.minimizer_LBFGS()
     @ti.func
     def kernel_Forward(self, time_step: ti.f64):
         # print(self.position)
@@ -830,10 +835,7 @@ class DeformableSimulator:
           
         # Optimize
         #print("x0_np: ", self.x0_np[None][0,0])
-        self.minimizer_Adam(1e-4)
-        self.minimizer_Adam(1e-5)
-        self.minimizer_Adam(1e-6)
-        self.minimizer_LBFGS()
+        self.Optimize()
         inv_h = 1 / self.h[None]
         for i in range(self.vertices_num):
             for d in range(3):
