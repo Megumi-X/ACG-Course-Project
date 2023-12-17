@@ -21,39 +21,40 @@ init_vertices[3] = ti.Vector([0.0, 0.0, 1.0])
 init_elements = ti.Vector.field(n=4,dtype=ti.i32,shape=1)
 init_elements[0] = ti.Vector([0,1,2,3])
 
-simulator.Initialize(init_vertices, init_elements, 1e3, 1e4, 0.3)
-# simulator.position[3] = ti.Vector([0.0, 0.0, 2.0])
+simulator.Initialize(init_vertices, init_elements, 1e3, 1e5, 0.3)
+simulator.position[3] = ti.Vector([0.0, 0.0, 2.0])
 
-# element_np = simulator.undeformed.elements.to_numpy()
-# folder = Path("./") / "basic_test"
-# create_folder(folder, exist_ok=True)
-# np.save(folder / "elements.npy", element_np)
-# position_0 = simulator.position.to_numpy()
-# np.save(folder / "0000.npy", position_0)
+element_np = simulator.undeformed.elements.to_numpy()
+folder = Path("./") / "basic_test"
+create_folder(folder, exist_ok=True)
+np.save(folder / "elements.npy", element_np)
+position_0 = simulator.position.to_numpy()
+np.save(folder / "0000.npy", position_0)
 
-# for i in tqdm(range(2)):
-#     position_np = simulator.position.to_numpy()
-#     print(f"current step {i}, current position {position_np}")
-#     simulator.Forward(0.01)
-#     position_np = simulator.position.to_numpy()
-#     np.save(folder / "{:04d}.npy".format(i + 1), position_np)
+for i in tqdm(range(2)):
+    position_np = simulator.position.to_numpy()
+    print(f"current step {i}, current position {position_np}")
+    simulator.Forward(0.001)
+    position_np = simulator.position.to_numpy()
+    np.save(folder / "{:04d}.npy".format(i + 1), position_np)
+
 # EPSILON = 2e-3
 # test_pos = ti.Matrix([[0.0, 0.0, 10.0], [1.0, 0.0, 10.0], [0.0, 1.0, 10.0], [0.0, 0.0, 11.0]])
 # test_pos_1 = ti.Matrix([[0.0, 0.0, 10.0], [1.0, 0.0, 10.0], [0.0, 1.0, 10.0], [0.0, 0.0, 11.0]])
 # test_pos_1[0,0] += EPSILON
 # e1 = 0
 # e2 = 0
-test_pos = ti.Matrix([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
+# test_pos = ti.Matrix([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
 
-@ti.kernel
-def test():
-    e1 = simulator.ComputeEnergy(test_pos, 0.1)
-    # e2 = simulator.ComputeEnergy(test_pos_1, 0.1)
-    # print((e2 - e1) / EPSILON)
-    simulator.ComputeEnergyGradient(test_pos, 0.1)
+# @ti.kernel
+# def test():
+#     e1 = simulator.ComputeEnergy(test_pos, 0.1)
+#     # e2 = simulator.ComputeEnergy(test_pos_1, 0.1)
+#     # print((e2 - e1) / EPSILON)
+#     simulator.ComputeEnergyGradient(test_pos, 0.1)
 
-test()
-print(simulator.energy_gradient)
+# test()
+# print(simulator.energy_gradient)
 
 
     

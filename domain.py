@@ -30,7 +30,7 @@ class Domain:
 
     def Initialize(self, vertices: ti.template(), elements: ti.template()):
         self.assign_v_e(vertices, elements)
-        print("Starlight")
+        # print("Starlight")
         for i in range(self.elements_num):
             v0 = self.vertices[self.elements[i][0]]
             v1 = self.vertices[self.elements[i][1]]

@@ -355,7 +355,7 @@ class DeformableSimulator:
                 for j in range(4):
                     local_position[i, j] = position[element[j], i]
             F = local_position @ basis_derivatives_q
-            print(F)
+            # print(F)
             energy += ComputeEnergyDensity(F,self.material[e].lam,self.material[e].mu)* finite_element.geometry_info_measure[3, 0]
             # print("energy density: ", ComputeEnergyDensity(F,self.material[e].lam,self.material[e].mu))
             # energy += self.material[e].ComputeEnergyDensity(F) * finite_element.geometry_info[3][0].measure
@@ -827,7 +827,7 @@ class DeformableSimulator:
           
         # Optimize
         #print("x0_np: ", self.x0_np[None][0,0])
-        self.minimizer_Adam()
+        self.minimizer_LBFGS()
         inv_h = 1 / self.h[None]
         for i in range(self.vertices_num):
             for d in range(3):

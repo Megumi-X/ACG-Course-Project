@@ -74,8 +74,7 @@ def ComputeEnergyDensity(F:ti.types.matrix(3,3,ti.f32),lam:ti.f32, mu:ti.f32):
     delta = 1
     dim = 3
     alpha = (1 - 1 / (dim + delta)) * mu / lam + 1
-    # return mu / 2 * (Ic - dim) + lam / 2 * (J - alpha) * (J - alpha) - 0.5 * mu * ti.log(Ic + delta)
-    return mu / 2 * (Ic - dim) - mu * ti.log(J) + lam / 2 * (ti.log(J)) * (ti.log(J))
+    return mu / 2 * (Ic - dim) + lam / 2 * (J - alpha) * (J - alpha) - 0.5 * mu * ti.log(Ic + delta)
 
 @ti.func
 def ComputeStressDensity(F:ti.types.matrix(3,3,ti.f32),lam:ti.f32, mu:ti.f32):
@@ -86,5 +85,4 @@ def ComputeStressDensity(F:ti.types.matrix(3,3,ti.f32),lam:ti.f32, mu:ti.f32):
     dim = 3
     alpha = (1 - 1 / (dim + delta)) * mu / lam + 1
     dJdF = DeterminantGrad(F)
-    # return (1 - 1 / (Ic + delta)) * mu * F + lam * (J - alpha) * dJdF
-    return mu * (F - mu * F.inverse().transpose()) + lam * ti.log(J) * F.inverse().transpose()
+    return (1 - 1 / (Ic + delta)) * mu * F + lam * (J - alpha) * dJdF
