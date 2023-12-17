@@ -13,7 +13,7 @@ Y = 1
 dx = 1.
 vertices_num = (X + 1) * (Y + 1) * 2
 elements_num = X * Y * 6
-init_vertices = ti.Vector.field(n=3,dtype=ti.f32,shape=vertices_num)
+init_vertices = ti.Vector.field(n=3,dtype=ti.f64,shape=vertices_num)
 for i in range(Y + 1):
     for j in range(X + 1):
         init_vertices[(i*(X+1) + j)*2] = ti.Vector([j * dx, i * dx, 0.0])
