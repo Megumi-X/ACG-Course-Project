@@ -3,13 +3,13 @@ from pathlib import Path
 from pbrt_renderer import create_folder, to_real_array
 import taichi as ti
 from tqdm import tqdm
-ti.init(arch=ti.cpu, default_fp=ti.f64)
+ti.init(arch=ti.cpu, default_fp=ti.f64,debug=True)
 from deformable import DeformableSimulator
 #import os
 #os.environ['TAICHI_MAX_NUM_SNODES'] = '10240000000'
 
-X = 10
-Y = 30
+X = 1
+Y = 3
 dx = 0.02
 vertices_num = (X + 1) * (Y + 1) * 2
 elements_num = X * Y * 6
@@ -71,10 +71,13 @@ test_pos_1 = ti.field(dtype=ti.f64,shape=(vertices_num,3))
 test_pos_zero = ti.field(dtype=ti.f64,shape=(vertices_num,3))
 
 
-for f in tqdm(range(300)):
+for f in tqdm(range(10)):
     position_np = simulator.position.to_numpy()
-    print("Current step is {} and current position is {}".format(f,position_np))
+    print("Current step is {} and current mean position is {}".format(f,position_np[:,2].mean()))
     # set_force(ti.cos(f * 0.1) * 5)
     simulator.Forward(0.01)
     position_np = simulator.position.to_numpy()
     np.save(folder / "{:04d}.npy".format(f + 1), position_np)
+
+position_np = simulator.position.to_numpy()
+print("Final position is {}".format(position_np))

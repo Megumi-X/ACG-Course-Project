@@ -8,13 +8,14 @@ from material import Material
 from material import materialTypeDict, ComputeEnergyDensity, ComputeStressDensity
 
 HISTORY_SIZE = 10
-N=90
+N=100
+ALPHA_COEFFICIENT = 0.8
 alpha_field = ti.field(dtype=ti.f64, shape=(N))
 for i in range(N):
-    alpha_field[i] = ((-1)**i)*2.0*(0.8)**i*1e-4
+    alpha_field[i] = ((-1)**i)*200.0*(ALPHA_COEFFICIENT)**i
 abs_alpha_field = ti.field(dtype = ti.f64,shape=(N))
 for i in range(N):
-    abs_alpha_field[i] = ((-1)**i)*2*(0.8)**i
+    abs_alpha_field[i] = ((-1)**i)*200.0*(ALPHA_COEFFICIENT)**i
 
 @ti.func
 def copy_fields(src: ti.template(), dest: ti.template()):
@@ -168,6 +169,16 @@ def dot_2d_and_3d(src1:ti.template(),src2:ti.template(),index0:ti.i32,dim1:ti.i3
         sum_ += src1[j,k] * src2[index0,j,k]
     return sum_
 
+@ti.func
+def dot_2d(src1:ti.template(),src2:ti.template(),dim0:ti.i32,dim1:ti.i32):
+    sum_ = 0.0
+    for i,j in ti.ndrange(dim0,dim1):
+        sum_ += src1[i,j] * src2[i,j]
+    return sum_
+
+@ti.func
+def is_nan(x):
+    return not (x<0 or x>0 or x == 0)
 
 
 @ti.data_oriented
@@ -233,6 +244,8 @@ class DeformableSimulator:
         self.v_field = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
         self.y = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
         
+        self.current_abs_alpha_field = ti.field(dtype=ti.f64,shape=(2))
+        
 
 
     @ti.kernel
@@ -256,7 +269,8 @@ class DeformableSimulator:
             element = self.undeformed.elements[e]
             local_matrix = ti.Matrix([[0.0 for i in range(4)] for j in range(4)])
             for i in range(4):
-                #print(finite_element.polynomials[i, 0])
+                # print("!!!!!!!!!!!!!FDLJNOIELJSNO")
+                # print(finite_element.polynomials[i, 5])
                 phi_i = ti.Vector([finite_element.polynomials[i,j] for j in range(6)])
                 # x, y, z = sp.symbols('x y z')
                 # poly_phi_i = phi_i[0] * x + phi_i[1] * y + phi_i[2] * z + phi_i[3] 
@@ -288,9 +302,9 @@ class DeformableSimulator:
                         #ti.activate(self.int_matrix, [j, i])
                         self.int_matrix[element[j], element[i]] += w_ij
                         #ti.activate(self.int_density_matrix, [i, j])
-                        self.int_density_matrix[element[i], element[j]] += w_ij * self.material[e].density
+                        self.int_density_matrix[element[i], element[j]] += w_ij * self.material[e].density / 2
                         #ti.activate(self.int_density_matrix, [j, i])
-                        self.int_density_matrix[element[j], element[i]] += w_ij * self.material[e].density
+                        self.int_density_matrix[element[j], element[i]] += w_ij * self.material[e].density / 2
 
 
     def Initialize(self, vertices:ti.template(), elements:ti.template(), density:ti.f64, youngs_modulus:ti.f64, poissons_ratio:ti.f64):
@@ -405,8 +419,8 @@ class DeformableSimulator:
     def ComputeEnergy(self, position, time_step) -> float:
         # sum_ = 0.0
         # for i,j in ti.ndrange(self.vertices_num,3):
-        #     sum_ += (position[i,j]-1)**2
-        # return sum_
+        #     sum_ += (position[i,j]-1)**2 + (position[i,j]-3) ** 4
+        # return sum_/(self.n*3)
         vertices_num = self.vertices_num
         inv_h = 1 / time_step
         coefficient = inv_h * inv_h / 2
@@ -445,7 +459,7 @@ class DeformableSimulator:
     @ti.func
     def ComputeEnergyGradient(self, position, time_step):
         # for i,j in ti.ndrange(self.vertices_num, 3):
-        #     self.energy_gradient[i,j] = 2*(position[i,j]-1)
+        #     self.energy_gradient[i,j] = (2*(position[i,j]-1) + 4*(position[i,j]-3)**3)/(self.n*3)
         # return
         for i, j in ti.ndrange(self.vertices_num, 3):
             self.kinetic_gradient[i, j] = 0
@@ -509,7 +523,7 @@ class DeformableSimulator:
     @ti.func
     def minimizer_Adam(self,lr:ti.f64):
         ftol = 1e-10
-        maxiter = 20
+        maxiter = 20000
         b1 = 0.9
         b2 = 0.99
         
@@ -525,13 +539,14 @@ class DeformableSimulator:
         ti.loop_config(serialize=True)
         for _ in range(maxiter):
             if counter >= 1:
-                current_energy = self.ComputeEnergy(self.x0_next_np, self.h[None])
-                # print(f"Current counter is {counter}, current energy is {current_energy}")
+                if counter == 0:
+                    current_energy = self.ComputeEnergy(self.x0_next_np, self.h[None])
+                    print(f"Adam Optimizer: Current counter is {counter}, current energy is {current_energy}")
                 
                 # print("Current diff:", compute_difference_norm_2d(self.x0_next_np, self.x0_np, self.vertices_num, 3))
-                if compute_difference_norm_2d(self.x0_next_np, self.x0_np, self.vertices_num, 3) < ftol:
-                    # print("! Uses", counter, "iterations to converge")
-                    break
+                # if compute_difference_norm_2d(self.x0_next_np, self.x0_np, self.vertices_num, 3) < ftol:
+                #     # print("! Uses", counter, "iterations to converge")
+                #     break
             if counter > maxiter - 1:
                 # print("Current diff:", compute_difference_norm_2d(self.x0_next_np, self.x0_np, self.vertices_num, 3))
                 # print("Fatal Warning: minimizer did not converge")
@@ -556,7 +571,7 @@ class DeformableSimulator:
     
     @ti.func
     def minimizer_LBFGS(self):
-        maxiter = 40
+        maxiter = 100
         ftol = 1e-10
         history_size = HISTORY_SIZE
         EPSILON = 1e-30
@@ -565,22 +580,30 @@ class DeformableSimulator:
         while True:
             if counter >= 1:
                 current_energy = self.ComputeEnergy(self.x0_next_np, self.h[None])
-                # print(f"Current counter is {counter}, current energy is {current_energy}")
+                older_energy = self.ComputeEnergy(self.x0_np, self.h[None])
+                print(f"L-BFGS Optimizer: Current counter is {counter}, current energy is {current_energy}, older energy is {older_energy}")
                 
-                # print("Current diff:", compute_difference_norm_2d(self.x0_next_np, self.x0_np, self.vertices_num, 3))
-                if compute_difference_norm_2d(self.x0_next_np, self.x0_np, self.vertices_num, 3) < ftol:
-                    # print("! Uses", counter, "iterations to converge")
-                    break
-            if counter > maxiter - 1:
                 print("Current diff:", compute_difference_norm_2d(self.x0_next_np, self.x0_np, self.vertices_num, 3))
-                print("Fatal Warning: minimizer did not converge")
+                # if compute_difference_norm_2d(self.x0_next_np, self.x0_np, self.vertices_num, 3) < ftol:
+                #     # print("! Uses", counter, "iterations to converge")
+                #     break
+            if counter > maxiter - 1:
+                # print("Current diff:", compute_difference_norm_2d(self.x0_next_np, self.x0_np, self.vertices_num, 3))
+                # print("Fatal Warning: minimizer did not converge")
                 break
             
             copy_fields_2d(self.x0_next_np, self.x0_np, self.vertices_num, 3)
             self.ComputeEnergyGradient(self.x0_next_np, self.h[None])
-            copy_fields_2d(self.energy_gradient, self.g_field, self.vertices_num, 3)
+            compute_normed_2d(self.energy_gradient, self.g_field, self.vertices_num, 3)
             if counter > 0:
-                copy_fields_2d(self.energy_gradient, self.q_field, self.vertices_num, 3)
+                # compute_normed_2d(self.g_field, self.step_direction, self.vertices_num,3)
+                # sjz test.
+                
+                
+                
+                
+                
+                compute_normed_2d(self.energy_gradient, self.q_field, self.vertices_num, 3)
                 if counter > history_size:
                     self.obtain_q_when_large(counter, history_size)
                 else:
@@ -629,8 +652,29 @@ class DeformableSimulator:
     
     @ti.func
     def line_search(self):
+        # alpha = 1.0
+        # beta = 0.1
+        # flag = False
+        # for _ in range(100):
+        #     compute_add_with_mult_2d(self.x0_np, self.step_direction, alpha, self.x0_np_added, self.vertices_num, 3)
+            
+        #     if is_nan(self.ComputeEnergy(self.x0_np_added, self.h[None])):
+        #         alpha *= 0.5
+        #         continue
+            
+        #     if self.ComputeEnergy(self.x0_np_added, self.h[None]) <= self.ComputeEnergy(self.x0_np, self.h[None]) + beta * alpha * dot_2d(self.energy_gradient,self.step_direction,self.n,3):
+        #         flag = True
+        #         break
+        #     alpha *= 0.8
+        # self.alpha_chosen[None] = alpha
+        # assert flag
+        # return
+        
+        
+        
+        
         current_min = float('inf')
-        EPSILON = 1e-20
+        EPSILON = 1e-30
         current_index = -1
         best = 0
         ti.loop_config(serialize=True)
@@ -660,10 +704,34 @@ class DeformableSimulator:
         if current_index == -1:
             print("Oh No! Now current idx is -1, which is not right at all!")
             current_index += 1
+        abs_alpha = 0.0
         if best >= 1:
-            self.alpha_chosen[None] = abs_alpha_field[current_index]/(norm_2d(self.step_direction,self.vertices_num,3)+EPSILON)
+            abs_alpha += abs_alpha_field[current_index]
+            # self.alpha_chosen[None] = abs_alpha_field[current_index]/(norm_2d(self.step_direction,self.vertices_num,3)+EPSILON)
         else:
-            self.alpha_chosen[None] = alpha_field[current_index]
+            abs_alpha += alpha_field[current_index] * norm_2d(self.step_direction,self.vertices_num,3)
+            # self.alpha_chosen[None] = alpha_field[current_index]
+        
+        self.current_abs_alpha_field[0] = abs_alpha * 1.1*ALPHA_COEFFICIENT
+        
+        self.current_abs_alpha_field[1] = abs_alpha / (1.1*ALPHA_COEFFICIENT)
+        
+        for _ in range(20):
+            compute_add_with_mult_2d(self.x0_np,self.step_direction_normed,0.75*self.current_abs_alpha_field[0]+0.25*self.current_abs_alpha_field[1],self.x0_np_added,self.vertices_num,3)
+            E_left_quat = self.ComputeEnergy(self.x0_np_added,self.h[None])
+            
+            compute_add_with_mult_2d(self.x0_np,self.step_direction_normed,0.25*self.current_abs_alpha_field[0]+0.75*self.current_abs_alpha_field[1],self.x0_np_added,self.vertices_num,3)
+            E_right_quat = self.ComputeEnergy(self.x0_np_added,self.h[None])
+            
+            if E_left_quat < E_right_quat:
+                self.current_abs_alpha_field[1] = 0.4 * self.current_abs_alpha_field[0] + 0.6 * self.current_abs_alpha_field[1]
+            else:
+                self.current_abs_alpha_field[0] = 0.6 * self.current_abs_alpha_field[0] + 0.4 * self.current_abs_alpha_field[1]
+                
+        self.alpha_chosen[None] = (0.5 * self.current_abs_alpha_field[0] + 0.5 * self.current_abs_alpha_field[1]) * norm_2d(self.step_direction,self.vertices_num,3)
+            
+            
+        
         
     # @ti.func
     # def obtain_q_when_large(self,counter:ti.i32,history_size:ti.i32):
@@ -693,16 +761,16 @@ class DeformableSimulator:
         
     @ti.func
     def obtain_q_when_large(self,counter:ti.i32,history_size:ti.i32):
-        EPSILON = 1e-25
+        EPSILON = 1e-30
         ti.loop_config(serialize=True)
         for index in range(history_size):
-            dot_y_q = dot_2d_and_3d(self.q_field,self.grad_history,(-index+counter)%history_size,self.vertices_num,3)
-            dot_y_s = sub_dot(self.grad_history,self.step_history,(-index+counter)%history_size,self.vertices_num,3)
+            dot_y_q = dot_2d_and_3d(self.q_field,self.grad_history,(-index+counter-1)%history_size,self.vertices_num,3)
+            dot_y_s = sub_dot(self.grad_history,self.step_history,(-index+counter-1)%history_size,self.vertices_num,3)
             alpha = dot_y_q / (dot_y_s + EPSILON)
             compute_add_with_mult_2d_add_3d(self.q_field,self.grad_history, -alpha, self.q_field, self.vertices_num,3,(-index+counter)%history_size)
         
-        dot_y_q = dot_2d_and_3d(self.q_field,self.grad_history,(counter+1)%history_size,self.vertices_num,3)
-        dot_y_s = sub_dot(self.grad_history,self.step_history,(counter+1)%history_size,self.vertices_num,3)
+        dot_y_q = dot_2d_and_3d(self.q_field,self.grad_history,(counter-1)%history_size,self.vertices_num,3)
+        dot_y_s = sub_dot(self.grad_history,self.step_history,(counter-1)%history_size,self.vertices_num,3)
         alpha = dot_y_q / (dot_y_s + EPSILON)
         
         ti.loop_config(serialize=True)
@@ -714,7 +782,7 @@ class DeformableSimulator:
             
     @ti.func
     def obtain_q_when_small(self,counter:ti.i32,history_size:ti.i32):
-        EPSILON = 1e-15
+        EPSILON = 1e-30
         ti.loop_config(serialize=True)
         for index in range(counter):
             dot_y_q = dot_2d_and_3d(self.q_field,self.grad_history,(-index+counter-1)%history_size,self.vertices_num,3)
@@ -825,10 +893,13 @@ class DeformableSimulator:
     @ti.func
     def Optimize(self):
         copy_fields_2d(self.x0_np, self.x0_next_np,self.n,3)
-        self.minimizer_Adam(1e-5)
-        self.minimizer_Adam(1e-6)
-        self.minimizer_Adam(1e-7)
+        # self.minimizer_Adam(1e-2)
+        # self.minimizer_Adam(1e-6)
+        # self.minimizer_Adam(1e-7)
         self.minimizer_LBFGS()
+        # self.minimizer_Adam(1e-6)
+        # self.minimizer_LBFGS()
+        # self.minimizer_LBFGS()
     @ti.func
     def kernel_Forward(self, time_step: ti.f64):
         # print(self.position)

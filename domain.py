@@ -111,8 +111,11 @@ class Domain:
                 a[1, ii] = self.finite_elements[i].vertices[ii,1]
                 a[2, ii] = self.finite_elements[i].vertices[ii,2]
                 a[3, ii] = 1.0
-            
+            # print("auioweihfjnqwbhlehuiwafjsdhb")
+            # print(self.finite_elements[i].vertices)
+            # print(a.determinant())
             A_inv = a.inverse()
+            # print(A_inv)
             for index in range(4):
                 self.finite_elements[i].polynomials[index,0] = A_inv[index, 0]
                 self.finite_elements[i].polynomials[index,1] = A_inv[index, 1]
