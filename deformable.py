@@ -507,7 +507,7 @@ class DeformableSimulator:
     
     @ti.func
     def minimizer_Adam(self,lr:ti.f64):
-        ftol = 1e-3
+        ftol = ti.f64(1e-20)
         maxiter = 1000
         b1 = 0.9
         b2 = 0.99
@@ -533,7 +533,7 @@ class DeformableSimulator:
                     break
             if counter > maxiter - 1:
                 # print("Current diff:", compute_difference_norm_2d(self.x0_next_np, self.x0_np, self.vertices_num, 3))
-                print("Fatal Warning: minimizer did not converge")
+                # print("Fatal Warning: minimizer did not converge")
                 break
             
             
@@ -556,7 +556,7 @@ class DeformableSimulator:
     @ti.func
     def minimizer_LBFGS(self):
         maxiter = 1000
-        ftol = 1e-15
+        ftol = ti.f64(1e-20)
         history_size = HISTORY_SIZE
         EPSILON = 1e-30
         counter = 0
