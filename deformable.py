@@ -823,7 +823,7 @@ class DeformableSimulator:
         copy_fields(self.next_velocity, self.velocity)
     @ti.func
     def Optimize(self):
-        copy_fields_2d(self.x0_np, self.x0_next_np,3)
+        copy_fields_2d(self.x0_np, self.x0_next_np,self.n,3)
         self.minimizer_Adam(1e-5)
         self.minimizer_Adam(1e-6)
         self.minimizer_Adam(1e-7)

@@ -46,7 +46,7 @@ for j in range(X + 1):
     simulator.dirichlet_boundary_condition[2 * j + 1] = ti.Vector([3., 3., 3.])
 
 for index in range(simulator.vertices_num):
-    simulator.external_acceleration[index] = ti.Vector([0.0, 0.0, -0.0]) # no g
+    simulator.external_acceleration[index] = ti.Vector([0.0, 0.0, -9.8]) # no g
 
 element_np = simulator.undeformed.elements.to_numpy()
 folder = Path("./") / "simple_cloth"
@@ -55,9 +55,9 @@ np.save(folder / "elements.npy", element_np)
 position_0 = simulator.position.to_numpy()
 np.save(folder / "0000.npy", position_0)
 
-for i in tqdm(range(2000)):
+for i in tqdm(range(10)):
     position_np = simulator.position.to_numpy()
     print("Current step is {} and current position is {}".format(i,position_np))
-    simulator.Forward(0.01)
+    simulator.Forward(0.001)
     position_np = simulator.position.to_numpy()
     np.save(folder / "{:04d}.npy".format(i + 1), position_np)
