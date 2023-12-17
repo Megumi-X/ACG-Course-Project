@@ -102,7 +102,7 @@ def compute_add_with_mult_2d_add_3d(add1: ti.template(), add2: ti.template(), al
 def compute_normed_2d(src: ti.template(), dest: ti.template(), dim0: ti.i32, dim1: ti.i32):
     EPSILON = 1e-30
     norm_ = norm_2d(src, dim0, dim1)
-    print("Current norm_ == ", norm_)
+    # print("Current norm_ == ", norm_)
     for i, j in ti.ndrange(dim0, dim1):
         dest[i, j] = src[i, j] / (norm_+EPSILON)
 
@@ -357,7 +357,7 @@ class DeformableSimulator:
                 for j in range(4):
                     local_position[i, j] = position[element[j], i]
             F = local_position @ basis_derivatives_q
-            print(F)
+            # print(F)
             energy += ComputeEnergyDensity(F,self.material[e].lam,self.material[e].mu)* finite_element.geometry_info_measure[3, 0]
             # print("energy density: ", ComputeEnergyDensity(F,self.material[e].lam,self.material[e].mu))
             # energy += self.material[e].ComputeEnergyDensity(F) * finite_element.geometry_info[3][0].measure
@@ -555,7 +555,7 @@ class DeformableSimulator:
     
     @ti.func
     def minimizer_LBFGS(self):
-        maxiter = 10
+        maxiter = 1000
         ftol = 1e-15
         history_size = HISTORY_SIZE
         EPSILON = 1e-30
@@ -823,6 +823,7 @@ class DeformableSimulator:
         copy_fields(self.next_velocity, self.velocity)
     @ti.func
     def Optimize(self):
+        copy_fields_2d(self.x0_np, self.x0_next_np)
         self.minimizer_Adam(1e-5)
         self.minimizer_Adam(1e-6)
         self.minimizer_Adam(1e-7)
