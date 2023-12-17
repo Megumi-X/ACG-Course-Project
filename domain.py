@@ -13,14 +13,14 @@ class Domain:
     def __init__(self, vertices_num: ti.int32, elements_num: ti.int32):
         self.vertices_num = vertices_num
         self.elements_num = elements_num
-        self.vertices = ti.Vector.field(n=3, dtype=ti.f64, shape=vertices_num)
+        self.vertices = ti.Vector.field(n=3, dtype=ti.f32, shape=vertices_num)
         self.elements = ti.Vector.field(n=4, dtype=ti.int32, shape=elements_num)
         self.finite_elements = ti.Struct.field(finiteElementTypeDict, shape=elements_num)
         self.geometry_info = ti.Struct.field({
             'dim': ti.i32,
             'vertices_num': ti.i32,
             'vertex_indices': ti.types.vector(4, ti.i32),
-            'measure': ti.f64,
+            'measure': ti.f32,
         }, shape=(4,6))
 
     @ti.kernel

@@ -175,18 +175,18 @@ class DeformableSimulator:
     def __init__(self, vertices_num: ti.int32, element_num: ti.int32):
         self.undeformed = Domain(vertices_num, element_num)
         self.material = ti.Struct.field(materialTypeDict, shape=element_num)
-        self.position = ti.Vector.field(n=3, dtype=ti.f64, shape=vertices_num)
-        self.pre_position = ti.Vector.field(n=3, dtype=ti.f64, shape=vertices_num)
-        self.velocity = ti.Vector.field(n=3, dtype=ti.f64, shape=vertices_num)
-        self.pre_velocity = ti.Vector.field(n=3, dtype=ti.f64, shape=vertices_num)
-        self.next_position = ti.Vector.field(n=3, dtype=ti.f64, shape=vertices_num)
-        self.next_velocity = ti.Vector.field(n=3, dtype=ti.f64, shape=vertices_num)
-        self.external_acceleration = ti.Vector.field(n=3, dtype=ti.f64, shape=vertices_num)
-        self.dirichlet_boundary_condition = ti.Vector.field(n=3, dtype=ti.f64, shape=vertices_num)
-        #self.int_matrix = ti.field(dtype=ti.f64)
-        #self.int_density_matrix = ti.field(dtype=ti.f64)
-        self.int_matrix = ti.field(dtype=ti.f64, shape=(vertices_num, vertices_num))
-        self.int_density_matrix = ti.field(dtype=ti.f64, shape=(vertices_num, vertices_num))
+        self.position = ti.Vector.field(n=3, dtype=ti.f32, shape=vertices_num)
+        self.pre_position = ti.Vector.field(n=3, dtype=ti.f32, shape=vertices_num)
+        self.velocity = ti.Vector.field(n=3, dtype=ti.f32, shape=vertices_num)
+        self.pre_velocity = ti.Vector.field(n=3, dtype=ti.f32, shape=vertices_num)
+        self.next_position = ti.Vector.field(n=3, dtype=ti.f32, shape=vertices_num)
+        self.next_velocity = ti.Vector.field(n=3, dtype=ti.f32, shape=vertices_num)
+        self.external_acceleration = ti.Vector.field(n=3, dtype=ti.f32, shape=vertices_num)
+        self.dirichlet_boundary_condition = ti.Vector.field(n=3, dtype=ti.f32, shape=vertices_num)
+        #self.int_matrix = ti.field(dtype=ti.f32)
+        #self.int_density_matrix = ti.field(dtype=ti.f32)
+        self.int_matrix = ti.field(dtype=ti.f32, shape=(vertices_num, vertices_num))
+        self.int_density_matrix = ti.field(dtype=ti.f32, shape=(vertices_num, vertices_num))
         block_size = 4
         grid_size = (vertices_num + block_size - 1) // block_size
         #ti.root.pointer(ti.ij, grid_size).dense(ti.ij, block_size).place(self.int_matrix)
@@ -197,38 +197,38 @@ class DeformableSimulator:
         self.free_vertex = ti.field(dtype=ti.i32, shape=(vertices_num, 3))
         self.free_vertex_vector_field = ti.Vector.field(n=3, dtype=ti.i32, shape=vertices_num)
         self.dirichlet_vertex = ti.field(dtype=ti.i32, shape=(vertices_num, 3))
-        self.dirichlet_value = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
-        self.h = ti.field(dtype=ti.f64, shape=())
-        self.x0_np = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
+        self.dirichlet_value = ti.field(dtype=ti.f32, shape=(vertices_num, 3))
+        self.h = ti.field(dtype=ti.f32, shape=())
+        self.x0_np = ti.field(dtype=ti.f32, shape=(vertices_num, 3))
         self.n = vertices_num
         
         # np.array([0 for i in range(self.vertices_num * 3)])
-        self.x0_next_np = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
-        self.step_direction = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
-        self.step_history = ti.field(dtype=ti.f64,shape = (HISTORY_SIZE,vertices_num,3))
-        self.grad_history = ti.field(dtype=ti.f64,shape = (HISTORY_SIZE,vertices_num,3))
-        self.g_field = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
-        self.q_field = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
-        self.x0_np_added = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
-        self.step_direction_normed = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
-        self.alpha_chosen = ti.field(dtype=ti.f64,shape=())
-        self.y_temp = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
+        self.x0_next_np = ti.field(dtype=ti.f32, shape=(vertices_num, 3))
+        self.step_direction = ti.field(dtype=ti.f32, shape=(vertices_num, 3))
+        self.step_history = ti.field(dtype=ti.f32,shape = (HISTORY_SIZE,vertices_num,3))
+        self.grad_history = ti.field(dtype=ti.f32,shape = (HISTORY_SIZE,vertices_num,3))
+        self.g_field = ti.field(dtype=ti.f32, shape=(vertices_num, 3))
+        self.q_field = ti.field(dtype=ti.f32, shape=(vertices_num, 3))
+        self.x0_np_added = ti.field(dtype=ti.f32, shape=(vertices_num, 3))
+        self.step_direction_normed = ti.field(dtype=ti.f32, shape=(vertices_num, 3))
+        self.alpha_chosen = ti.field(dtype=ti.f32,shape=())
+        self.y_temp = ti.field(dtype=ti.f32, shape=(vertices_num, 3))
         
-        self.res = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
-        self.elastic_gradient = ti.Matrix.field(n=3, m=4, dtype=ti.f64, shape=self.undeformed.elements_num)
+        self.res = ti.field(dtype=ti.f32, shape=(vertices_num, 3))
+        self.elastic_gradient = ti.Matrix.field(n=3, m=4, dtype=ti.f32, shape=self.undeformed.elements_num)
 
-        self.elastic_force = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
-        self.delta = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
-        self.kinetic_gradient = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
-        self.energy_gradient = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
-        self.temp_m_field = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
-        self.temp_v_field = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
-        self.dot_y_q = ti.field(dtype=ti.f64,shape = (HISTORY_SIZE))
-        self.dot_y_s = ti.field(dtype=ti.f64,shape = (HISTORY_SIZE))
-        self.alpha_field = ti.field(dtype=ti.f64,shape=(HISTORY_SIZE))
+        self.elastic_force = ti.field(dtype=ti.f32, shape=(vertices_num, 3))
+        self.delta = ti.field(dtype=ti.f32, shape=(vertices_num, 3))
+        self.kinetic_gradient = ti.field(dtype=ti.f32, shape=(vertices_num, 3))
+        self.energy_gradient = ti.field(dtype=ti.f32, shape=(vertices_num, 3))
+        self.temp_m_field = ti.field(dtype=ti.f32, shape=(vertices_num, 3))
+        self.temp_v_field = ti.field(dtype=ti.f32, shape=(vertices_num, 3))
+        self.dot_y_q = ti.field(dtype=ti.f32,shape = (HISTORY_SIZE))
+        self.dot_y_s = ti.field(dtype=ti.f32,shape = (HISTORY_SIZE))
+        self.alpha_field = ti.field(dtype=ti.f32,shape=(HISTORY_SIZE))
         
-        self.m_field = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
-        self.v_field = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
+        self.m_field = ti.field(dtype=ti.f32, shape=(vertices_num, 3))
+        self.v_field = ti.field(dtype=ti.f32, shape=(vertices_num, 3))
         
 
 
@@ -290,7 +290,7 @@ class DeformableSimulator:
                         self.int_density_matrix[element[j], element[i]] += w_ij * self.material[e].density
 
 
-    def Initialize(self, vertices:ti.template(), elements:ti.template(), density:ti.f64, youngs_modulus:ti.f64, poissons_ratio:ti.f64):
+    def Initialize(self, vertices:ti.template(), elements:ti.template(), density:ti.f32, youngs_modulus:ti.f32, poissons_ratio:ti.f32):
         self.undeformed.Initialize(vertices, elements)
         print("finish initializing undeformed domain")
         # Initialize the material
@@ -405,7 +405,7 @@ class DeformableSimulator:
         # return sum_
         vertices_num = self.vertices_num
         inv_h = 1 / time_step
-        coefficient = inv_h * inv_h
+        coefficient = inv_h * inv_h / 2
         y = ti.Matrix([[0.0 for i in range(3)] for j in range(self.vertices_num)])
         for i in range(vertices_num):
             for d in range(3):
@@ -434,8 +434,8 @@ class DeformableSimulator:
         # for iii, jjj in ti.ndrange(self.vertices_num, self.vertices_num):
         #     p2[iii] += self.int_density_matrix[iii, jjj] * delta_2[jjj]
         elastic_energy = self.ComputeElasticEnergy(position)
-        #print("kinetic_energy: ", kinetic_energy)
-        #print("elastic_energy: ", elastic_energy)
+        print("kinetic_energy: ", kinetic_energy)
+        print("elastic_energy: ", elastic_energy)
         return kinetic_energy + elastic_energy
     
     @ti.func
@@ -465,14 +465,14 @@ class DeformableSimulator:
             self.kinetic_gradient[iii, kkk] += coefficient * (self.int_density_matrix[iii, jjj] * self.delta[jjj, kkk])
         #kinetic_gradient = self.int_density_matrix[None] @ delta
         self.ComputeElasticForce(position)
-        #print("kinetic_gradient: ", kinetic_gradient)
-        #print("elastic_gradient: ", elastic_gradient)
+        # print("kinetic_gradient: ", kinetic_gradient)
+        # print("elastic_gradient: ", elastic_gradient)
         for i, j in ti.ndrange(self.vertices_num, 3):
             self.energy_gradient[i, j] = self.kinetic_gradient[i, j] - self.elastic_force[i, j]
         
     @ti.func
     def E(self, x_next):
-        x_next_ti = ti.field(dtype=ti.f64, shape=(self.vertices_num, 3))
+        x_next_ti = ti.field(dtype=ti.f32, shape=(self.vertices_num, 3))
         for i in range(self.vertices_num * 3):
             q = i // 3
             r = i % 3
@@ -482,7 +482,7 @@ class DeformableSimulator:
     
     @ti.func
     def E_gradient(self, x_next):
-        x_next_ti = ti.field(dtype=ti.f64, shape=(self.vertices_num, 3))
+        x_next_ti = ti.field(dtype=ti.f32, shape=(self.vertices_num, 3))
         for i in range(self.vertices_num * 3):
             q = i // 3
             r = i % 3
@@ -508,7 +508,7 @@ class DeformableSimulator:
         maxiter = 5000
         b1 = 0.9
         b2 = 0.99
-        lr = 1e-2
+        lr = 1e-4
         self.ComputeEnergyGradient(self.x0_np, self.h[None])
         copy_fields_2d(self.energy_gradient, self.m_field, self.vertices_num, 3)
         copy_fields_2d_square(self.energy_gradient, self.v_field, self.vertices_num, 3)
@@ -539,18 +539,10 @@ class DeformableSimulator:
             old_E = self.ComputeEnergy(self.x0_np, self.h[None])
             self.update_m_v_adam(b1,b2,lr)
             
-            counter += 1
-            
-            
-        
-        
-        
-    
-    
-    
+            counter += 1               
     
     @ti.func
-    def update_m_v_adam(self,b1:ti.f64,b2:ti.f64,lr:ti.f64):
+    def update_m_v_adam(self,b1:ti.f32,b2:ti.f32,lr:ti.f32):
         EPSILON = 1e-30
         for i,j in ti.ndrange(self.vertices_num,3):
             self.m_field[i,j] = b1 * self.m_field[i,j] + (1-b1) * self.energy_gradient[i,j]
@@ -625,7 +617,7 @@ class DeformableSimulator:
             
             
     @ti.func
-    def update_history(self,counter:ti.i32,history_size:ti.i32,alpha:ti.f64):
+    def update_history(self,counter:ti.i32,history_size:ti.i32,alpha:ti.f32):
         for vertex_idx, dim_idx in ti.ndrange(self.vertices_num,3):
             self.step_history[counter%history_size,vertex_idx,dim_idx] = alpha * self.step_direction[vertex_idx,dim_idx]
             self.grad_history[counter%history_size,vertex_idx,dim_idx] = self.y_temp[vertex_idx,dim_idx]
@@ -811,45 +803,28 @@ class DeformableSimulator:
     
     
     @ti.kernel
-    def Forward(self, time_step: ti.f64):
+    def Forward(self, time_step: ti.f32):
         #print(self.position[0])
         for i, d in ti.ndrange(self.vertices_num, 3):
             self.x0_np[i,d] = self.position[i][d]
             self.x0_next_np[i,d] = self.next_position[i][d]
-        #print(self.position[0])
-        #print(self.x0_np[None])
-        #print(self.velocity[0])
-        #print(self.velocity[1])
-        #print(self.velocity[2])
-        #print(self.velocity[3])
+        # print(self.position[0])
+        # print(self.x0_np[None])
+        # print(self.velocity[0])
+        # print(self.velocity[1])
+        # print(self.velocity[2])
+        # print(self.velocity[3])
         self.kernel_Forward(time_step)
         copy_fields(self.next_position, self.position)
         copy_fields(self.next_velocity, self.velocity)
         
     @ti.func
-    def kernel_Forward(self, time_step: ti.f64):
+    def kernel_Forward(self, time_step: ti.f32):
         # print(self.position)
         self.h[None] = time_step  
         
           
         # Optimize
-        '''
-        x0_np = np.array([[self.position[i][j] for j in range(3)] for i in range(self.vertices_num)])
-        x_next_np = x0_np
-        max_iter = 100
-        ftol = 1e-10
-        def callback(OptimizeResult):
-            pass
-        res = scipy.optimize.minimize(self.E, x0_np, method="L-BFGS-B", jac=self.E_gradient, callback=callback, options={ "ftol": ftol, "maxiter": max_iter, "iprint": -1 })
-        for i in range(self.vertices_num):
-            for d in range(3):
-                if self.free_vertex[i, d] == 1:
-                    self.next_position[i][d] = res.x[i, d]
-                    self.next_velocity[i][d] = (self.next_position[i][d] - self.position[i][d]) * inv_h
-                else:
-                    self.next_position[i][d] = self.dirichlet_value[i, d]
-                    self.next_velocity[i][d] = 0.0
-        '''
         #print("x0_np: ", self.x0_np[None][0,0])
         self.minimizer_Adam()
         inv_h = 1 / self.h[None]
