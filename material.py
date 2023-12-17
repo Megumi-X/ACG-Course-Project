@@ -6,13 +6,13 @@ import taichi as ti
 def DeterminantGrad(A: ti.types.matrix(3, 3, ti.f32)) -> ti.types.matrix(3, 3, ti.f32):
     dJdA = ti.Matrix([[0.0 for i in range(3)] for j in range(3)])
     dJdA[0, 0] = A[1, 1] * A[2, 2] - A[1, 2] * A[2, 1]
-    dJdA[0, 1] = A[0, 2] * A[2, 1] - A[0, 1] * A[2, 2]
-    dJdA[0, 2] = A[0, 1] * A[1, 2] - A[0, 2] * A[1, 1]
-    dJdA[1, 0] = A[1, 2] * A[2, 0] - A[1, 0] * A[2, 2]
+    dJdA[0, 1] = A[2, 0] * A[1, 2] - A[1, 0] * A[2, 2]
+    dJdA[0, 2] = A[1, 0] * A[2, 1] - A[2, 0] * A[1, 1]
+    dJdA[1, 0] = A[2, 1] * A[0, 2] - A[0, 1] * A[2, 2]
     dJdA[1, 1] = A[0, 0] * A[2, 2] - A[0, 2] * A[2, 0]
-    dJdA[1, 2] = A[0, 2] * A[1, 0] - A[0, 0] * A[1, 2]
-    dJdA[2, 0] = A[1, 0] * A[2, 1] - A[1, 1] * A[2, 0]
-    dJdA[2, 1] = A[0, 1] * A[2, 0] - A[0, 0] * A[2, 1]
+    dJdA[1, 2] = A[2, 0] * A[0, 1] - A[0, 0] * A[2, 1]
+    dJdA[2, 0] = A[0, 1] * A[1, 2] - A[1, 1] * A[0, 2]
+    dJdA[2, 1] = A[1, 0] * A[0, 2] - A[0, 0] * A[1, 2]
     dJdA[2, 2] = A[0, 0] * A[1, 1] - A[0, 1] * A[1, 0]
     return dJdA    
 
