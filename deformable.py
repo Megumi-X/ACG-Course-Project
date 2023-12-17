@@ -7,7 +7,7 @@ from domain import Domain, IntegratePoly
 from material import Material
 from material import materialTypeDict, ComputeEnergyDensity, ComputeStressDensity
 
-HISTORY_SIZE = 10
+HISTORY_SIZE = 5
 N=90
 alpha_field = ti.field(dtype=ti.f64, shape=(N))
 for i in range(N):
@@ -185,12 +185,14 @@ class DeformableSimulator:
         self.dirichlet_boundary_condition = ti.Vector.field(n=3, dtype=ti.f64, shape=vertices_num)
         #self.int_matrix = ti.field(dtype=ti.f64)
         #self.int_density_matrix = ti.field(dtype=ti.f64)
-        self.int_matrix = ti.field(dtype=ti.f64, shape=(vertices_num, vertices_num))
-        self.int_density_matrix = ti.field(dtype=ti.f64, shape=(vertices_num, vertices_num))
+        # self.int_matrix = ti.field(dtype=ti.f64, shape=(vertices_num, vertices_num))
+        # self.int_density_matrix = ti.field(dtype=ti.f64, shape=(vertices_num, vertices_num))
+        self.int_matrix = ti.field(dtype=ti.f64)
+        self.int_density_matrix = ti.field(dtype=ti.f64)
         block_size = 4
         grid_size = (vertices_num + block_size - 1) // block_size
-        #ti.root.pointer(ti.ij, grid_size).dense(ti.ij, block_size).place(self.int_matrix)
-        #ti.root.pointer(ti.ij, grid_size).dense(ti.ij, block_size).place(self.int_density_matrix)
+        ti.root.pointer(ti.ij, grid_size).dense(ti.ij, block_size).place(self.int_matrix)
+        ti.root.pointer(ti.ij, grid_size).dense(ti.ij, block_size).place(self.int_density_matrix)
         self.elastic_gradient_map = ti.Vector.field(n=2, dtype=ti.i32, shape=(vertices_num, 100))
         self.vertices_num = vertices_num
         self.element_num = element_num
@@ -507,8 +509,8 @@ class DeformableSimulator:
     
     @ti.func
     def minimizer_Adam(self,lr:ti.f64):
-        ftol = ti.f64(1e-20)
-        maxiter = 1000
+        ftol = 1e-3
+        maxiter = 20
         b1 = 0.9
         b2 = 0.99
         
@@ -555,8 +557,8 @@ class DeformableSimulator:
     
     @ti.func
     def minimizer_LBFGS(self):
-        maxiter = 1000
-        ftol = ti.f64(1e-20)
+        maxiter = 10
+        ftol = 1e-15
         history_size = HISTORY_SIZE
         EPSILON = 1e-30
         counter = 0
@@ -572,7 +574,7 @@ class DeformableSimulator:
                     break
             if counter > maxiter - 1:
                 # print("Current diff:", compute_difference_norm_2d(self.x0_next_np, self.x0_np, self.vertices_num, 3))
-                print("Fatal Warning: minimizer did not converge")
+                # print("Fatal Warning: minimizer did not converge")
                 break
             
             copy_fields_2d(self.x0_next_np, self.x0_np, self.vertices_num, 3)
