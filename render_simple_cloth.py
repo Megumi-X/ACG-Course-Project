@@ -25,8 +25,8 @@ def render_data(image_name, obj):
     spp = 64
 
     r = PbrtRenderer()
-    eye = to_real_array([3.0, 1.0, 0.5])
-    look_at = to_real_array([0.0, 1.0, 1.0])
+    eye = to_real_array([2.0, -0.5, 0.25])
+    look_at = to_real_array([0.0, 0.5, 0.0])
     eye = look_at + 0.8 * (eye - look_at)
     r.set_camera(eye=eye, look_at=look_at, up=[0, 0, 1], fov=45)
     r.add_infinite_light({
@@ -36,6 +36,15 @@ def render_data(image_name, obj):
 
     # Convert voxels into surface triangle meshes.
     # If you use tet meshes, this step can be simplified by calling tet2obj from tet_mesh.
+    # elements = []
+    # for e in range(obj[1]):
+    #     elements.append(e[0], e[1], e[2])
+    #     elements.append(e[0], e[1], e[3])
+    #     elements.append(e[0], e[2], e[3])
+    #     elements.append(e[1], e[2], e[3])
+    
+    # r.add_triangle_mesh(obj[0], elements, None, None, ("diffuse", { "rgb reflectance": (0.1, 0.4, 0.7) }))
+
     vertices, elements = tet2obj(obj[0], obj[1])
     
     r.add_triangle_mesh(vertices, elements, None, None, ("diffuse", { "rgb reflectance": (0.1, 0.4, 0.7) }))
