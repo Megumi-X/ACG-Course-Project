@@ -3,7 +3,7 @@ from pathlib import Path
 from pbrt_renderer import create_folder, to_real_array
 import taichi as ti
 from tqdm import tqdm
-ti.init(arch=ti.cuda)
+ti.init(arch=ti.cuda, default_fp=ti.f64)
 from deformable import DeformableSimulator
 #import os
 #os.environ['TAICHI_MAX_NUM_SNODES'] = '10240000000'

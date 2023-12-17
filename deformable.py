@@ -229,6 +229,7 @@ class DeformableSimulator:
         
         self.m_field = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
         self.v_field = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
+        self.y = ti.field(dtype=ti.f64, shape=(vertices_num, 3))
         
 
 
@@ -309,6 +310,7 @@ class DeformableSimulator:
 
         # Compute the integration matrix
         self.ComputeIntMatrix()
+        # print(self.int_density_matrix)
 
         # Build the elastic gradient map
         for e in range(self.vertices_num):
@@ -355,7 +357,7 @@ class DeformableSimulator:
                 for j in range(4):
                     local_position[i, j] = position[element[j], i]
             F = local_position @ basis_derivatives_q
-            # print(F)
+            print(F)
             energy += ComputeEnergyDensity(F,self.material[e].lam,self.material[e].mu)* finite_element.geometry_info_measure[3, 0]
             # print("energy density: ", ComputeEnergyDensity(F,self.material[e].lam,self.material[e].mu))
             # energy += self.material[e].ComputeEnergyDensity(F) * finite_element.geometry_info[3][0].measure
@@ -407,16 +409,16 @@ class DeformableSimulator:
         vertices_num = self.vertices_num
         inv_h = 1 / time_step
         coefficient = inv_h * inv_h / 2
-        y = ti.Matrix([[0.0 for i in range(3)] for j in range(self.vertices_num)])
+        # y = ti.Matrix([[0.0 for i in range(3)] for j in range(self.vertices_num)])
         for i in range(vertices_num):
             for d in range(3):
-                y[i, d] = self.position[i][d] + self.velocity[i][d] * time_step + self.external_acceleration[i][d] * time_step * time_step
+                self.y[i, d] = self.position[i][d] + self.velocity[i][d] * time_step + self.external_acceleration[i][d] * time_step * time_step
         #kinetic_gradient = ti.Matrix([[0.0 for i in range(3)] for j in range(self.vertices_num)])
         #delta = ti.Matrix([[0.0 for i in range(3)] for j in range(self.vertices_num)])
         for i in range(vertices_num):
             for dd in range(3):
                 x_next_d = position[i,dd]
-                y_d = y[i, dd]
+                y_d = self.y[i, dd]
                 #print("x_next_d: ", x_next_d)
                 #print("y_d: ", y_d)
                 self.delta[i, dd] = x_next_d - y_d
@@ -449,16 +451,16 @@ class DeformableSimulator:
         vertices_num = self.vertices_num
         inv_h = 1 / time_step
         coefficient = inv_h * inv_h
-        y = ti.Matrix([[0.0 for i in range(3)] for j in range(self.vertices_num)])
+        # y = ti.Matrix([[0.0 for i in range(3)] for j in range(self.vertices_num)])
         for i in range(vertices_num):
             for d in range(3):
-                y[i, d] = self.position[i][d] + self.velocity[i][d] * time_step + self.external_acceleration[i][d] * time_step * time_step
+                self.y[i, d] = self.position[i][d] + self.velocity[i][d] * time_step + self.external_acceleration[i][d] * time_step * time_step
         #kinetic_gradient = ti.Matrix([[0.0 for i in range(3)] for j in range(self.vertices_num)])
         #delta = ti.Matrix([[0.0 for i in range(3)] for j in range(self.vertices_num)])
         for i in range(vertices_num):
             for dd in range(3):
                 x_next_d = position[i,dd]
-                y_d = y[i, dd]
+                y_d = self.y[i, dd]
                 #print("x_next_d: ", x_next_d)
                 #print("y_d: ", y_d)
                 self.delta[i, dd] = x_next_d - y_d
