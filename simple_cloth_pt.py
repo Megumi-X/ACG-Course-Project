@@ -46,7 +46,16 @@ for i in range(Y):
 
 print("Initializing...")
 simulator = DeformableSimulator(vertices_num, elements_num)
-simulator.Initialize(init_vertices, elements, 1e3, 1e6, 0.3)
+dirichilet_boundary = torch.zeros([vertices_num,3],dtype=torch.float64)
+dirichilet_boundary += float('inf')
+for j in range(X + 1):
+    dirichilet_boundary[2 * j] = init_vertices[2 * j]
+    dirichilet_boundary[2 * j + 1] = init_vertices[2 * j + 1]
+    
+
+
+simulator.Initialize(init_vertices, elements, 1e3, 1e4, 0.3, dirichilet_boundary)
+# simulator.Initialize(init_vertices, elements, 1e3, 1e6, 0.3)
 print("Initialization finished.")
 
 

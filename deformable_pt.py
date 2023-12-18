@@ -104,10 +104,13 @@ class DeformableSimulator(torch.nn.Module):
             self.position[:] = self.undeformed.vertices[:]
             self.next_position[:] = self.undeformed.vertices[:]
             for i in range(vertices_num):
-                self.dirichlet_boundary_condition[i] = float('inf')
+                for dim in range(3):
+                    self.dirichlet_boundary_condition[i,dim] = float('inf')
     
     def ComputeIntMatrix(self):
         elements_num = self.undeformed.elements_num
+        self.int_density_matrix *= 0
+        self.int_density_matrix *= 0
         for e in range(elements_num):
             finite_element = self.undeformed.elements[e]
             element = self.undeformed.elements[e]
@@ -116,33 +119,31 @@ class DeformableSimulator(torch.nn.Module):
                 phi_i = torch.tensor([self.undeformed.finite_elements_polynomials[e][i][j] for j in range(4)])
                 for j in range(i,4):
                     phi_j = torch.tensor([self.undeformed.finite_elements_polynomials[e][j][k] for k in range(4)])
-                pos = torch.zeros([3],dtype=torch.float64)
-                pos += self.undeformed.finite_elements_vertices[e].sum(dim=0)
-                pos /= 4
+                    pos = torch.zeros([3],dtype=torch.float64)
+                    pos += self.undeformed.finite_elements_vertices[e].sum(dim=0)
+                    pos /= 4
+                    
+                    value = (torch.dot(phi_i[:3],pos) + phi_i[3])*(torch.dot(phi_j[:3],pos) + phi_j[3])
+                    
+                    w_ij = value * self.undeformed.finite_elements_geometry_info_measure[e,3,0]
+                    
+                    if i == j:
+                        local_matrix[i,j] += w_ij
+                        
+                        self.int_matrix[int(element[i]),int(element[i])] += w_ij
+                        
+                        self.int_density_matrix[int(element[i]),int(element[i])] += w_ij * self.material_density[e]
+                    else:
+                        local_matrix[i,j] = w_ij
+                        local_matrix[j,i] = w_ij
+                        
+                        self.int_matrix[element[i],element[j]] += w_ij
+                        self.int_matrix[element[j],element[i]] += w_ij
+                        
+                        self.int_density_matrix[element[i],element[j]] += w_ij * self.material_density[e]
+                        self.int_density_matrix[element[j],element[i]] += w_ij * self.material_density[e]
                 
-                value = (torch.dot(phi_i[:3],pos) + phi_i[3])*(torch.dot(phi_j[:3],pos) + phi_j[3])
-                
-                w_ij = value * self.undeformed.finite_elements_geometry_info_measure[e,3,0]
-                
-                if i == j:
-                    local_matrix[i,j] += w_ij
-                    self.int_matrix[int(element[i]),int(element[i])] *= 0
-                    self.int_matrix[int(element[i]),int(element[i])] += w_ij
-                    self.int_density_matrix[int(element[i]),int(element[i])] *= 0
-                    self.int_density_matrix[int(element[i]),int(element[i])] += w_ij * self.material_density[e]
-                else:
-                    local_matrix[i,j] = w_ij
-                    local_matrix[j,i] = w_ij
-                    self.int_matrix[element[i],element[j]] *= 0
-                    self.int_matrix[element[j],element[i]] *= 0
-                    self.int_matrix[element[i],element[j]] += w_ij
-                    self.int_matrix[element[j],element[i]] += w_ij
-                    self.int_density_matrix[element[i],element[j]] *= 0
-                    self.int_density_matrix[element[j],element[i]] *= 0
-                    self.int_density_matrix[element[i],element[j]] += w_ij * self.material_density[e]
-                    self.int_density_matrix[element[j],element[i]] += w_ij * self.material_density[e]
-                
-    def Initialize(self,vertices,elements,density,youngs_modulus, poissons_ratio):
+    def Initialize(self,vertices,elements,density,youngs_modulus, poissons_ratio, dirichlet_boundary_condition = None):
         self.undeformed.Initialize(vertices, elements)
         
         elements_num = self.undeformed.elements_num
@@ -155,6 +156,9 @@ class DeformableSimulator(torch.nn.Module):
             self.material_mu[i] = youngs_modulus / (2 * (1 + poissons_ratio))
         
         self.InitializePosition()
+        
+        if dirichlet_boundary_condition is not None:
+            self.dirichlet_boundary_condition.data.copy_(dirichlet_boundary_condition)
         
         self.ComputeIntMatrix()
         
@@ -231,15 +235,17 @@ class DeformableSimulator(torch.nn.Module):
         kinetic_energy = torch.einsum('...ij,...ji->',self.int_density_matrix,delta_delta) * coefficient
         elastic_energy = self.ComputeElasticEnergy(position)
         
-        if torch.randn(())>4:
-            print('k==',kinetic_energy)
-            print('v==',elastic_energy)
-        return kinetic_energy + elastic_energy
+
+        return dict(
+            energy = kinetic_energy + elastic_energy,
+            kinetic_energy = kinetic_energy,
+            elastic_energy = elastic_energy,
+        )
     def loss_function(self,time_step):
         return self.ComputeEnergy(self.next_position,time_step)
     def Forward(self,time_step):
-        loss = self.loss_function(time_step)
-        return loss
+        loss_dict = self.loss_function(time_step)
+        return loss_dict
 
     def UpdatePositionAndVelocity(self, time_step):
         inv_h = 1/time_step        
@@ -269,22 +275,52 @@ class DeformableSimulatorController(torch.nn.Module):
     def __init__(self,model):
         super().__init__()
         self.model = model
-        self.optimizer = torch.optim.LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=100,lr=1e-8,line_search_fn='strong_wolfe',
-                                           tolerance_grad = 1e-15, tolerance_change = 1e-15)
+
+        self.Adam_MaxIter = 100
+        self.optimizer_Adam_list = [
+        #     torch.optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()),lr=1e-6),
+        #     torch.optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()),lr=1e-7),
+        #     torch.optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()),lr=1e-8),
+        #     torch.optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()),lr=1e-9),
+        ]    
+        
+        
+        self.optimizer_LBFGS_list = [
+            
+            torch.optim.LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=1500,lr=1e-0,line_search_fn='strong_wolfe',
+                                           tolerance_grad = 1e-15, tolerance_change = 1e-15),
+            # torch.optim.LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=1500,lr=1e-1,line_search_fn='strong_wolfe',
+            #                                tolerance_grad = 1e-15, tolerance_change = 1e-15),
+            # torch.optim.LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=500,lr=1e-2,line_search_fn='strong_wolfe',
+            #                                tolerance_grad = 1e-15, tolerance_change = 1e-15),
+            torch.optim.LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=1500,lr=1e-3,line_search_fn='strong_wolfe',
+                                           tolerance_grad = 1e-15, tolerance_change = 1e-15),
+            # # torch.optim.LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=500,lr=1e-3,line_search_fn='strong_wolfe',
+            # #                                tolerance_grad = 1e-15, tolerance_change = 1e-15),
+            torch.optim.LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=1500,lr=1e-7,line_search_fn='strong_wolfe',
+                                           tolerance_grad = 1e-15, tolerance_change = 1e-15),
+        ]
+        
         
     def Forward(self,time_step):
         self.model.UpdateNextPosition()
-        
-        for _ in range(1):
-            def closure():
-                self.optimizer.zero_grad()
+        for optimizer in self.optimizer_Adam_list:
+            for _ in range(self.Adam_MaxIter):
+                optimizer.zero_grad()
                 loss = self.model.Forward(time_step)
                 # print("Current energy is ", loss)
-                loss.backward()
-                return loss
-            self.optimizer.step(closure)
-        # print(self.optimizer._params)
-        # print(self.model.next_position)
+                loss['energy'].backward()
+                optimizer.step()
+            
+        for optimizer in self.optimizer_LBFGS_list:
+                def closure():
+                    optimizer.zero_grad()
+                    loss = self.model.Forward(time_step)
+                    # print("Current energy is ", loss['energy'].item())
+                    # print("Current Kinetic energy is ", loss['kinetic_energy'].item())
+                    # print("Current Elastic energy is ", loss['elastic_energy'].item())
+                    loss['energy'].backward()
+                    return loss['energy']
+                optimizer.step(closure)
         
         self.model.UpdatePositionAndVelocity(time_step)
-        return
