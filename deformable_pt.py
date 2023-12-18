@@ -64,15 +64,6 @@ class DeformableSimulator(torch.nn.Module):
         super().__init__()
         
         self.next_position = torch.nn.Parameter(torch.zeros((vertices_num,3),dtype=torch.float64), requires_grad=True)
-        
-        
-        
-        
-        
-        
-        
-        
-        
         self.undeformed = Domain(vertices_num, element_num)
         self.material_density = torch.nn.Parameter(torch.zeros((element_num),dtype=torch.float64), requires_grad=False)
         self.material_youngs_modulus = torch.nn.Parameter(torch.zeros((element_num),dtype=torch.float64), requires_grad=False)
@@ -135,14 +126,19 @@ class DeformableSimulator(torch.nn.Module):
                 
                 if i == j:
                     local_matrix[i,j] += w_ij
+                    self.int_matrix[int(element[i]),int(element[i])] *= 0
                     self.int_matrix[int(element[i]),int(element[i])] += w_ij
+                    self.int_density_matrix[int(element[i]),int(element[i])] *= 0
                     self.int_density_matrix[int(element[i]),int(element[i])] += w_ij * self.material_density[e]
                 else:
                     local_matrix[i,j] = w_ij
                     local_matrix[j,i] = w_ij
-                    
+                    self.int_matrix[element[i],element[j]] *= 0
+                    self.int_matrix[element[j],element[i]] *= 0
                     self.int_matrix[element[i],element[j]] += w_ij
                     self.int_matrix[element[j],element[i]] += w_ij
+                    self.int_density_matrix[element[i],element[j]] *= 0
+                    self.int_density_matrix[element[j],element[i]] *= 0
                     self.int_density_matrix[element[i],element[j]] += w_ij * self.material_density[e]
                     self.int_density_matrix[element[j],element[i]] += w_ij * self.material_density[e]
                 
@@ -269,7 +265,7 @@ class DeformableSimulator(torch.nn.Module):
 class DeformableSimulatorController:
     def __init__(self,model):
         self.model = model
-        self.optimizer = torch.optim.LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=20,lr=1e-8,line_search_fn='strong_wolfe',
+        self.optimizer = torch.optim.LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=100,lr=1e-8,line_search_fn='strong_wolfe',
                                            tolerance_grad = 1e-15, tolerance_change = 1e-15)
         
     def Forward(self,time_step):
