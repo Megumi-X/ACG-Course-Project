@@ -76,6 +76,3 @@ for f in tqdm(range(100)):
     simulatorController.Forward(0.01)
     position_np = simulator.position.detach().cpu().numpy()
     np.save(folder / "{:04d}.npy".format(f + 1), position_np)
-
-position_np = simulator.position.numpy()
-print("Final position is {}".format(position_np))
