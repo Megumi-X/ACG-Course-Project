@@ -70,8 +70,8 @@ np.save(folder / "0000.npy", position_0)
 
 simulatorController = DeformableSimulatorController(simulator)
 
-if USE_CUDA:
-    simulatorController.cuda()
+# if USE_CUDA:
+#     simulatorController.cuda()
 
 for f in tqdm(range(100)):
     position_np = simulator.position.detach().cpu().numpy()
