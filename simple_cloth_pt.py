@@ -10,7 +10,7 @@ def create_folder(folder_name, exist_ok):
     Path(folder_name).mkdir(parents=True, exist_ok=exist_ok)
 
 
-
+USE_CUDA = False
 X = 10
 Y = 30
 dx = 0.02
@@ -79,14 +79,14 @@ np.save(folder / "0000.npy", position_0)
 
 simulatorController = DeformableSimulatorController(simulator)
 
-# if USE_CUDA:
-#     simulatorController.cuda()
+if USE_CUDA:
+    simulatorController.cuda()
 
 for f in tqdm(range(100)):
     position_np = simulator.position.detach().cpu().numpy()
     print("Current step is {} and current position - 0.01 is {}".format(f,position_np[:,2].mean() - 0.01))
 for f in tqdm(range(300)):
-    position_np = simulator.position.numpy()
+    position_np = simulator.position.detach().cpu().numpy()
     #print("Current step is {} and current position - 0.01 is {}".format(f,position_np[:,2].mean() - 0.01))
     # set_force(ti.cos(f * 0.1) * 5)
     simulatorController.Forward(0.01)
