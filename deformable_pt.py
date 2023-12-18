@@ -311,6 +311,7 @@ class DeformableSimulatorController(torch.nn.Module):
                 loss = self.model.Forward(time_step)
                 # print("Current energy is ", loss)
                 loss['energy'].backward()
+                self.model.next_position.grad[self.model.free_vertex_vector_field==0] *= 0
                 optimizer.step()
             
         for optimizer in self.optimizer_LBFGS_list:
@@ -321,6 +322,7 @@ class DeformableSimulatorController(torch.nn.Module):
                     # print("Current Kinetic energy is ", loss['kinetic_energy'].item())
                     # print("Current Elastic energy is ", loss['elastic_energy'].item())
                     loss['energy'].backward()
+                    self.model.next_position.grad[self.model.free_vertex_vector_field==0] *= 0
                     return loss['energy']
                 optimizer.step(closure)
         
