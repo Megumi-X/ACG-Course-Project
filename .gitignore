@@ -175,3 +175,4 @@ render_results/
 basic_test/
 simple_cloth/
 render_simple_cloth/
+.pbrt/
