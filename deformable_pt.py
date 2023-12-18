@@ -127,6 +127,7 @@ class DeformableSimulator(torch.nn.Module):
                     phi_j = torch.tensor([self.undeformed.finite_elements_polynomials[e][j][k] for k in range(4)])
                 pos = torch.zeros([3],dtype=torch.float64)
                 pos += self.undeformed.finite_elements_vertices[e].sum(dim=0)
+                pos /= 4
                 
                 value = (torch.dot(phi_i[:3],pos) + phi_i[3])*(torch.dot(phi_j[:3],pos) + phi_j[3])
                 
@@ -140,10 +141,10 @@ class DeformableSimulator(torch.nn.Module):
                     local_matrix[i,j] = w_ij
                     local_matrix[j,i] = w_ij
                     
-                    self.int_matrix[element[i],element[j]] += w_ij/2
-                    self.int_matrix[element[j],element[i]] += w_ij/2
-                    self.int_density_matrix[element[i],element[j]] += w_ij * self.material_density[e]/2
-                    self.int_density_matrix[element[j],element[i]] += w_ij * self.material_density[e]/2
+                    self.int_matrix[element[i],element[j]] += w_ij
+                    self.int_matrix[element[j],element[i]] += w_ij
+                    self.int_density_matrix[element[i],element[j]] += w_ij * self.material_density[e]
+                    self.int_density_matrix[element[j],element[i]] += w_ij * self.material_density[e]
                 
     def Initialize(self,vertices,elements,density,youngs_modulus, poissons_ratio):
         self.undeformed.Initialize(vertices, elements)

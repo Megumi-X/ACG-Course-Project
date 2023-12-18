@@ -54,8 +54,8 @@ for index in range(simulator.vertices_num):
     simulator.external_acceleration[index] += torch.tensor([0.0, 0.0, -9.80])
 
 for j in range(X+1):
-    simulator.dirichlet_boundary_condition[j * 2] = simulator.position[j * 2]
-    simulator.dirichlet_boundary_condition[j * 2 + 1] = simulator.position[j * 2 + 1]
+    simulator.dirichlet_boundary_condition[j * 2] = init_vertices[j * 2]
+    simulator.dirichlet_boundary_condition[j * 2 + 1] = init_vertices[j * 2 + 1]
 
 
 element_np = simulator.undeformed.elements.numpy()
@@ -78,5 +78,5 @@ for f in tqdm(range(300)):
     position_np = simulator.position.numpy()
     np.save(folder / "{:04d}.npy".format(f + 1), position_np)
 
-#position_np = simulator.position.numpy()
-#print("Final position is {}".format(position_np))
+position_np = simulator.position.numpy()
+print("Final position is {}".format(position_np))
