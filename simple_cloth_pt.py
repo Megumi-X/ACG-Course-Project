@@ -5,6 +5,7 @@ from tqdm import tqdm
 from deformable_pt import DeformableSimulator, DeformableSimulatorController
 
 torch.set_default_dtype(torch.float64)
+USE_CUDA = True
 
 def create_folder(folder_name, exist_ok):
     Path(folder_name).mkdir(parents=True, exist_ok=exist_ok)
@@ -54,7 +55,7 @@ for j in range(X + 1):
     
 
 
-simulator.Initialize(init_vertices, elements, 1e3, 1e4, 0.3, dirichilet_boundary)
+simulator.Initialize(init_vertices, elements, 1e3, 1e7, 0.3, dirichilet_boundary)
 # simulator.Initialize(init_vertices, elements, 1e3, 1e6, 0.3)
 print("Initialization finished.")
 
@@ -62,9 +63,9 @@ print("Initialization finished.")
 for index in range(simulator.vertices_num):
     simulator.external_acceleration[index] += torch.tensor([0.0, 0.0, -9.80])
 
-for j in range(X+1):
-    simulator.dirichlet_boundary_condition[j * 2] = init_vertices[j * 2]
-    simulator.dirichlet_boundary_condition[j * 2 + 1] = init_vertices[j * 2 + 1]
+# for j in range(X+1):
+#     simulator.dirichlet_boundary_condition[j * 2] = init_vertices[j * 2]
+#     simulator.dirichlet_boundary_condition[j * 2 + 1] = init_vertices[j * 2 + 1]
 
 
 element_np = simulator.undeformed.elements.numpy()
@@ -79,14 +80,14 @@ np.save(folder / "0000.npy", position_0)
 
 simulatorController = DeformableSimulatorController(simulator)
 
-# if USE_CUDA:
-#     simulatorController.cuda()
+if USE_CUDA:
+    simulatorController.cuda()
 
-for f in tqdm(range(100)):
-    position_np = simulator.position.detach().cpu().numpy()
-    print("Current step is {} and current position - 0.01 is {}".format(f,position_np[:,2].mean() - 0.01))
+# for f in tqdm(range(100)):
+#     position_np = simulator.position.detach().cpu().numpy()
+#     print("Current step is {} and current position - 0.01 is {}".format(f,position_np[:,2].mean() - 0.01))
 for f in tqdm(range(300)):
-    position_np = simulator.position.numpy()
+    # position_np = simulator.position.numpy()
     #print("Current step is {} and current position - 0.01 is {}".format(f,position_np[:,2].mean() - 0.01))
     # set_force(ti.cos(f * 0.1) * 5)
     simulatorController.Forward(0.01)
