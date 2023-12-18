@@ -76,7 +76,7 @@ class DeformableSimulator(torch.nn.Module):
         self.dirichlet_boundary_condition = torch.nn.Parameter(torch.zeros((vertices_num,3),dtype=torch.float64), requires_grad=False)
         self.dirichlet_value = torch.nn.Parameter(torch.zeros((vertices_num,3),dtype=torch.float64), requires_grad=False)
         
-        self.int_matrix = torch.nn.Parameter(torch.zeros((1000,1000),dtype=torch.float64), requires_grad=False)
+        self.int_matrix = torch.nn.Parameter(torch.zeros((vertices_num,vertices_num),dtype=torch.float64), requires_grad=False)
         self.int_density_matrix = torch.nn.Parameter(torch.zeros((vertices_num,vertices_num),dtype=torch.float64), requires_grad = False)
         
         
