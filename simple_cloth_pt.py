@@ -11,8 +11,8 @@ def create_folder(folder_name, exist_ok):
 
 
 
-X = 1
-Y = 3
+X = 10
+Y = 30
 dx = 0.02
 vertices_num = (X + 1) * (Y + 1) * 2
 elements_num = X * Y * 6
@@ -53,6 +53,10 @@ print("Initialization finished.")
 for index in range(simulator.vertices_num):
     simulator.external_acceleration[index] += torch.tensor([0.0, 0.0, -9.80])
 
+for j in range(X+1):
+    simulator.dirichlet_boundary_condition[j * 2] = simulator.position[j * 2]
+    simulator.dirichlet_boundary_condition[j * 2 + 1] = simulator.position[j * 2 + 1]
+
 
 element_np = simulator.undeformed.elements.numpy()
 folder = Path("./") / "simple_cloth"
@@ -61,18 +65,18 @@ np.save(folder / "elements.npy", element_np)
 position_0 = simulator.position.numpy()
 np.save(folder / "0000.npy", position_0)
 
-print(simulator.external_acceleration.numpy())
+#print(simulator.external_acceleration.numpy())
 
 
 simulatorController = DeformableSimulatorController(simulator)
 
-for f in tqdm(range(100)):
+for f in tqdm(range(300)):
     position_np = simulator.position.numpy()
-    print("Current step is {} and current position - 0.01 is {}".format(f,position_np[:,2].mean() - 0.01))
+    #print("Current step is {} and current position - 0.01 is {}".format(f,position_np[:,2].mean() - 0.01))
     # set_force(ti.cos(f * 0.1) * 5)
     simulatorController.Forward(0.01)
     position_np = simulator.position.numpy()
     np.save(folder / "{:04d}.npy".format(f + 1), position_np)
 
-position_np = simulator.position.numpy()
-print("Final position is {}".format(position_np))
+#position_np = simulator.position.numpy()
+#print("Final position is {}".format(position_np))
