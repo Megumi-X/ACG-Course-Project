@@ -288,8 +288,8 @@ class DeformableSimulatorController(torch.nn.Module):
         
         self.optimizer_LBFGS_list = [
             
-            NoBreak_LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=1500,lr=1e-0,line_search_fn='strong_wolfe',
-                                           tolerance_grad = 1e-15, tolerance_change = 1e-15),
+            # NoBreak_LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=1500,lr=1e-0,line_search_fn='strong_wolfe',
+            #                                tolerance_grad = 1e-15, tolerance_change = 1e-15),
             # torch.optim.LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=1500,lr=1e-1,line_search_fn='strong_wolfe',
             #                                tolerance_grad = 1e-15, tolerance_change = 1e-15),
             # torch.optim.LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=500,lr=1e-2,line_search_fn='strong_wolfe',
@@ -298,8 +298,8 @@ class DeformableSimulatorController(torch.nn.Module):
                                            tolerance_grad = 1e-15, tolerance_change = 1e-15),
             # # torch.optim.LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=500,lr=1e-3,line_search_fn='strong_wolfe',
             # #                                tolerance_grad = 1e-15, tolerance_change = 1e-15),
-            NoBreak_LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=1500,lr=1e-7,line_search_fn='strong_wolfe',
-                                           tolerance_grad = 1e-15, tolerance_change = 1e-15),
+            # NoBreak_LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=1500,lr=1e-7,line_search_fn='strong_wolfe',
+            #                                tolerance_grad = 1e-15, tolerance_change = 1e-15),
         ]
         
         

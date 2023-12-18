@@ -10,8 +10,6 @@ USE_CUDA = True
 def create_folder(folder_name, exist_ok):
     Path(folder_name).mkdir(parents=True, exist_ok=exist_ok)
 
-
-USE_CUDA = False
 X = 10
 Y = 30
 dx = 0.02
