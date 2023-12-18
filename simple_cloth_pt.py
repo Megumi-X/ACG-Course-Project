@@ -70,13 +70,16 @@ np.save(folder / "0000.npy", position_0)
 
 simulatorController = DeformableSimulatorController(simulator)
 
+if USE_CUDA:
+    simulatorController.cuda()
+
+for f in tqdm(range(100)):
+    position_np = simulator.position.detach().cpu().numpy()
+    print("Current step is {} and current position - 0.01 is {}".format(f,position_np[:,2].mean() - 0.01))
 for f in tqdm(range(300)):
     position_np = simulator.position.numpy()
     #print("Current step is {} and current position - 0.01 is {}".format(f,position_np[:,2].mean() - 0.01))
     # set_force(ti.cos(f * 0.1) * 5)
     simulatorController.Forward(0.01)
-    position_np = simulator.position.numpy()
+    position_np = simulator.position.detach().cpu().numpy()
     np.save(folder / "{:04d}.npy".format(f + 1), position_np)
-
-position_np = simulator.position.numpy()
-print("Final position is {}".format(position_np))
