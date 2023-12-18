@@ -1,5 +1,6 @@
 import torch
 from domain_pt import Domain
+from no_break_optimizer import NoBreak_LBFGS
 
 torch.set_grad_enabled(True)
 
@@ -244,8 +245,8 @@ class DeformableSimulator(torch.nn.Module):
     def loss_function(self,time_step):
         return self.ComputeEnergy(self.next_position,time_step)
     def Forward(self,time_step):
-        loss_dict = self.loss_function(time_step)
-        return loss_dict
+        loss = self.loss_function(time_step)
+        return loss
 
     def UpdatePositionAndVelocity(self, time_step):
         inv_h = 1/time_step        
@@ -287,17 +288,17 @@ class DeformableSimulatorController(torch.nn.Module):
         
         self.optimizer_LBFGS_list = [
             
-            torch.optim.LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=1500,lr=1e-0,line_search_fn='strong_wolfe',
+            NoBreak_LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=1500,lr=1e-0,line_search_fn='strong_wolfe',
                                            tolerance_grad = 1e-15, tolerance_change = 1e-15),
             # torch.optim.LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=1500,lr=1e-1,line_search_fn='strong_wolfe',
             #                                tolerance_grad = 1e-15, tolerance_change = 1e-15),
             # torch.optim.LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=500,lr=1e-2,line_search_fn='strong_wolfe',
             #                                tolerance_grad = 1e-15, tolerance_change = 1e-15),
-            torch.optim.LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=1500,lr=1e-3,line_search_fn='strong_wolfe',
+            NoBreak_LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=1500,lr=1e-3,line_search_fn='strong_wolfe',
                                            tolerance_grad = 1e-15, tolerance_change = 1e-15),
             # # torch.optim.LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=500,lr=1e-3,line_search_fn='strong_wolfe',
             # #                                tolerance_grad = 1e-15, tolerance_change = 1e-15),
-            torch.optim.LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=1500,lr=1e-7,line_search_fn='strong_wolfe',
+            NoBreak_LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=1500,lr=1e-7,line_search_fn='strong_wolfe',
                                            tolerance_grad = 1e-15, tolerance_change = 1e-15),
         ]
         
