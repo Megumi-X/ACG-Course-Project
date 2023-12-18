@@ -80,7 +80,7 @@ class DeformableSimulator(torch.nn.Module):
         self.material_lam = torch.nn.Parameter(torch.zeros((element_num),dtype=torch.float64), requires_grad=False)
         self.material_mu = torch.nn.Parameter(torch.zeros((element_num),dtype=torch.float64), requires_grad=False)
         
-        self.external_acceleration = torch.zeros((vertices_num,3),dtype=torch.float64)
+        self.external_acceleration = torch.nn.Parameter(torch.zeros((vertices_num,3),dtype=torch.float64),requires_grad=False)
         self.dirichlet_boundary_condition = torch.nn.Parameter(torch.zeros((vertices_num,3),dtype=torch.float64), requires_grad=False)
         self.dirichlet_value = torch.nn.Parameter(torch.zeros((vertices_num,3),dtype=torch.float64), requires_grad=False)
         
@@ -223,6 +223,9 @@ class DeformableSimulator(torch.nn.Module):
         inv_h = 1/time_step
         coefficient = inv_h**2/2
         # print(self.external_acceleration)
+        # print("pos.device==",self.position.device)
+        # print("velocity.device==",self.velocity.device)
+        # print("external_acceleration.device==",self.external_acceleration.device)
         y = self.position + self.velocity * time_step + self.external_acceleration * time_step**2
         
         delta = position - y # vert * 3
@@ -241,7 +244,7 @@ class DeformableSimulator(torch.nn.Module):
         loss = self.loss_function(time_step)
         return loss
 
-    def UpdatePosition(self, time_step):
+    def UpdatePositionAndVelocity(self, time_step):
         inv_h = 1/time_step        
         with torch.no_grad():
             self.next_position[self.free_vertex_vector_field==0] *= 0
@@ -265,8 +268,9 @@ class DeformableSimulator(torch.nn.Module):
         return self.Forward(*args,**kwargs)
 
 
-class DeformableSimulatorController:
+class DeformableSimulatorController(torch.nn.Module):
     def __init__(self,model):
+        super().__init__()
         self.model = model
         self.optimizer = torch.optim.LBFGS(filter(lambda p: p.requires_grad, self.model.parameters()),max_iter=20,lr=1e-8,line_search_fn='strong_wolfe',
                                            tolerance_grad = 1e-15, tolerance_change = 1e-15)
@@ -285,5 +289,5 @@ class DeformableSimulatorController:
         # print(self.optimizer._params)
         # print(self.model.next_position)
         
-        self.model.UpdatePosition(time_step)
+        self.model.UpdatePositionAndVelocity(time_step)
         return
