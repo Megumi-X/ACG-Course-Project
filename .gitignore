@@ -176,3 +176,5 @@ basic_test/
 simple_cloth/
 render_simple_cloth/
 .pbrt/
+bouncing_torus/
+render_bouncing_torus/

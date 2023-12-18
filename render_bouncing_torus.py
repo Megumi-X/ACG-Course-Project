@@ -60,7 +60,7 @@ def render_data_wrapper(arg):
     return render_data(arg[0],arg[1])
 def main():
     data_folder = Path(root) / "bouncing_torus"
-    render_folder = Path(root) / "render_bouncing_ball"
+    render_folder = Path(root) / "render_bouncing_torus"
     create_folder(render_folder, exist_ok=True)
 
     for f in range(0, 300):
