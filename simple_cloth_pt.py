@@ -53,7 +53,7 @@ for j in range(X + 1):
     
 
 
-simulator.Initialize(init_vertices, elements, 1e3, 1e7, 0.3, dirichilet_boundary)
+simulator.Initialize(init_vertices, elements, 1e3, 1e5, 0.3, dirichilet_boundary)
 # simulator.Initialize(init_vertices, elements, 1e3, 1e6, 0.3)
 print("Initialization finished.")
 

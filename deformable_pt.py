@@ -93,6 +93,7 @@ class DeformableSimulator(torch.nn.Module):
         self.position = torch.nn.Parameter(torch.zeros((vertices_num,3),dtype=torch.float64), requires_grad=False)
         
         self.velocity = torch.nn.Parameter(torch.zeros((vertices_num,3),dtype=torch.float64), requires_grad=False)
+        self.collision_bound = []
         
         
         
@@ -203,6 +204,18 @@ class DeformableSimulator(torch.nn.Module):
         
         
         return torch.einsum('b,b->',ComputeEnergyDensity(F,self.material_lam,self.material_mu) , self.undeformed.finite_elements_geometry_info_measure[:,3,0])
+
+    def ComputePenaltyEnergy(self,position):
+        EPISLON = 1e-4
+        PENALTY_COEFFICIENT = 1e15
+        distance_list = []
+        for collision in self.collision_bound:
+            distance_list.append(collision(position))
+        energy = 0
+        for distance in distance_list:
+            vertices_energy = PENALTY_COEFFICIENT * (torch.nn.functional.relu(EPISLON - distance, inplace=False)**2 + torch.nn.functional.relu(EPISLON - distance, inplace=False))
+            energy += vertices_energy.sum()
+        return energy
     
     # def ComputeElasticForce(self,position):
     #     element_num = self.undeformed.elements_num
@@ -235,12 +248,14 @@ class DeformableSimulator(torch.nn.Module):
         delta_delta = torch.einsum('...jk,...ik->...ji',delta,delta)
         kinetic_energy = torch.einsum('...ij,...ji->',self.int_density_matrix,delta_delta) * coefficient
         elastic_energy = self.ComputeElasticEnergy(position)
+        penalty_energy = self.ComputePenaltyEnergy(position)
         
 
         return dict(
-            energy = kinetic_energy + elastic_energy,
+            energy = kinetic_energy + elastic_energy + penalty_energy,
             kinetic_energy = kinetic_energy,
             elastic_energy = elastic_energy,
+            penalty_energy = penalty_energy
         )
     def loss_function(self,time_step):
         return self.ComputeEnergy(self.next_position,time_step)
