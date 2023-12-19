@@ -28,10 +28,10 @@ def create_and_load_tet_meshes(folder, mesh_name):
 def create_folder(folder_name, exist_ok):
     Path(folder_name).mkdir(parents=True, exist_ok=exist_ok)
 
-folder = Path("./") / "bouncing_torus"
+folder = Path("./") / "bunny"
 create_folder(folder, exist_ok=True)
 
-vertices_np, elements_np = create_and_load_tet_meshes(folder, "torus_low_res")
+vertices_np, elements_np = create_and_load_tet_meshes(folder, "bunny_low_res")
 vertices_num = vertices_np.shape[0]
 elements_num = elements_np.shape[0]
 
@@ -42,7 +42,7 @@ init_vertices += torch.tensor([0, 0, 2])
 
 print("Initializing...")
 simulator = DeformableSimulator(vertices_num, elements_num)
-simulator.Initialize(init_vertices, elements, 1e3, 1e4, 0.3)
+simulator.Initialize(init_vertices, elements, 1e3, 1e3, 0.3)
 
 def ground_collision(position):
     return position[:, 2]
@@ -61,8 +61,8 @@ simulatorController = DeformableSimulatorController(simulator)
 simulatorController.cuda()
 
 def step():
-    for i in range(100):
-        simulatorController.Forward(0.0001)
+    for i in range(10):
+        simulatorController.Forward(0.001)
 
 
 for f in tqdm(range(120)):

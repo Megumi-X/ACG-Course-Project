@@ -67,7 +67,8 @@ np.save(folder / "0000.npy", position_0)
 simulatorController = DeformableSimulatorController(simulator)
 simulatorController.cuda()
 
-for f in tqdm(range(200)):
-    simulatorController.Forward(0.01)
+for f in tqdm(range(120)):
+    for i in range(10):
+        simulatorController.Forward(0.001)
     position_np = simulator.position.detach().cpu().numpy()
     np.save(folder / "{:04d}.npy".format(f + 1), position_np)

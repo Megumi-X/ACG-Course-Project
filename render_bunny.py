@@ -10,7 +10,6 @@ from pbrt_renderer import create_folder, to_real_array
 from pbrt_renderer import PbrtRenderer
 from tet_mesh import tet2obj
 import imageio
-import trimesh
 
 def export_gif(folder_name, gif_name, fps, name_prefix, name_suffix):
     frame_names = [os.path.join(folder_name, f) for f in os.listdir(folder_name)
@@ -24,12 +23,12 @@ def export_gif(folder_name, gif_name, fps, name_prefix, name_suffix):
     else:
         imageio.mimsave(gif_name, images)
 
-def render_data(render_folder, image_name, obj):
+def render_data(image_name, obj):
     spp = 64
 
     r = PbrtRenderer()
-    eye = to_real_array([5, 5, 3.0])
-    look_at = to_real_array([0.0, 0.0, 1.5])
+    eye = to_real_array([4, 4, 2.0])
+    look_at = to_real_array([0.0, 0.0, 1.3])
     eye = look_at + 0.8 * (eye - look_at)
     r.set_camera(eye=eye, look_at=look_at, up=[0, 0, 1], fov=45)
     r.add_infinite_light({
@@ -49,11 +48,9 @@ def render_data(render_folder, image_name, obj):
     # r.add_triangle_mesh(obj[0], elements, None, None, ("diffuse", { "rgb reflectance": (0.1, 0.4, 0.7) }))
 
     vertices, elements = tet2obj(obj[0], obj[1])
-    cone_mesh = trimesh.load(Path("asset") / "cone.obj")
     
     r.add_triangle_mesh(vertices, elements, None, None, ("diffuse", { "rgb reflectance": (0.1, 0.4, 0.7) }))
     r.add_plane([0.0, 0.0, 0.0], [0.0, 0.0, 1.0], 10000, ("diffuse", { "rgb reflectance": (0.7, 0.4, 0.1) }))
-    r.add_triangle_mesh(cone_mesh.vertices * 1e3, cone_mesh.faces, None, None, ("diffuse", { "rgb reflectance": (0.2, 0.7, 0.3) }))
 
     # The real rendering job starts here.
     r.set_image(pixel_samples=spp, file_name=image_name,
@@ -62,13 +59,13 @@ def render_data(render_folder, image_name, obj):
 def render_data_wrapper(arg):
     return render_data(arg[0],arg[1])
 def main():
-    data_folder = Path(root) / "ball_on_pin"
-    render_folder = Path(root) / "render_ball_on_pin"
+    data_folder = Path(root) / "bunny"
+    render_folder = Path(root) / "render_bunny"
     create_folder(render_folder, exist_ok=True)
 
-    for f in range(0, 120):
+    for f in range(0, 200):
         obj = (np.load(data_folder / "{:04d}.npy".format(f)), np.load(data_folder / "elements.npy"))
-        render_data(render_folder, render_folder / "{:04d}.png".format(f), obj)
-    export_gif(render_folder, render_folder / "ball_on_pin.gif", 0, "0", ".png")
+        render_data(render_folder / "{:04d}.png".format(f), obj)
+    export_gif(render_folder, render_folder / "bouncing_torus.gif", 0, "0", ".png")
 if __name__ == "__main__":
     main()
