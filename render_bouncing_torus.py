@@ -27,8 +27,8 @@ def render_data(image_name, obj):
     spp = 64
 
     r = PbrtRenderer()
-    eye = to_real_array([10, -2, 5.0])
-    look_at = to_real_array([0.0, 0.0, 5.0])
+    eye = to_real_array([5, 5, 3.0])
+    look_at = to_real_array([0.0, 0.0, 1.5])
     eye = look_at + 0.8 * (eye - look_at)
     r.set_camera(eye=eye, look_at=look_at, up=[0, 0, 1], fov=45)
     r.add_infinite_light({
@@ -50,7 +50,7 @@ def render_data(image_name, obj):
     vertices, elements = tet2obj(obj[0], obj[1])
     
     r.add_triangle_mesh(vertices, elements, None, None, ("diffuse", { "rgb reflectance": (0.1, 0.4, 0.7) }))
-    r.add_plane([0.0, 0.0, 0.0], [0.0, 0.0, 1.0], 30, ("diffuse", { "rgb reflectance": (0.7, 0.4, 0.1) }))
+    r.add_plane([0.0, 0.0, 0.0], [0.0, 0.0, 1.0], 10000, ("diffuse", { "rgb reflectance": (0.7, 0.4, 0.1) }))
 
     # The real rendering job starts here.
     r.set_image(pixel_samples=spp, file_name=image_name,
@@ -63,9 +63,9 @@ def main():
     render_folder = Path(root) / "render_bouncing_torus"
     create_folder(render_folder, exist_ok=True)
 
-    for f in range(0, 300):
+    for f in range(0, 200):
         obj = (np.load(data_folder / "{:04d}.npy".format(f)), np.load(data_folder / "elements.npy"))
         render_data(render_folder / "{:04d}.png".format(f), obj)
-
+    export_gif(render_folder, render_folder / "bouncing_torus.gif", 0, "0", ".png")
 if __name__ == "__main__":
     main()

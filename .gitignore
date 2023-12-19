@@ -178,3 +178,6 @@ render_simple_cloth/
 .pbrt/
 bouncing_torus/
 render_bouncing_torus/
+simple_cloth----/
+ball_on_pin/
+render_ball_on_pin/

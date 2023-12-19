@@ -28,17 +28,16 @@ def create_and_load_tet_meshes(folder, mesh_name):
 def create_folder(folder_name, exist_ok):
     Path(folder_name).mkdir(parents=True, exist_ok=exist_ok)
 
-folder = Path("./") / "bouncing_torus"
+folder = Path("./") / "ball_on_pin"
 create_folder(folder, exist_ok=True)
 
-vertices_np, elements_np = create_and_load_tet_meshes(folder, "torus_low_res")
+vertices_np, elements_np = create_and_load_tet_meshes(folder, "sphere_low_res")
 vertices_num = vertices_np.shape[0]
 elements_num = elements_np.shape[0]
 
 init_vertices = torch.tensor(vertices_np, dtype=torch.float64)
 elements = torch.tensor(elements_np, dtype=torch.long)
-# init_vertices = torch.matmul(torch.tensor([[1, 0, 0], [0, np.cos(0.49 * np.pi), np.sin(0.49 * np.pi)], [0, - np.sin(0.49 * np.pi), np.cos(0.49 * np.pi)]], dtype=torch.float64), init_vertices.transpose(0, 1)).transpose(0, 1)
-init_vertices += torch.tensor([0, 0, 2])
+init_vertices += torch.tensor([0, 0, 3])
 
 print("Initializing...")
 simulator = DeformableSimulator(vertices_num, elements_num)
@@ -47,7 +46,15 @@ simulator.Initialize(init_vertices, elements, 1e3, 1e4, 0.3)
 def ground_collision(position):
     return position[:, 2]
 
+def pin_collision(position):
+    r = torch.norm(position[:, :2], dim=1)
+    z = position[:, 2]
+    return (2 * r + z - 1) / np.sqrt(5)
+
+
+
 simulator.collision_bound.append(ground_collision)
+simulator.collision_bound.append(pin_collision)
 for i in range(vertices_num):
     simulator.external_acceleration[i] = torch.tensor([0, 0, -9.8])
 print("Initialization finished.")
