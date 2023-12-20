@@ -42,7 +42,7 @@ init_vertices += torch.tensor([0, 0, 2])
 
 print("Initializing...")
 simulator = DeformableSimulator(vertices_num, elements_num)
-simulator.Initialize(init_vertices, elements, 1e3, 1e3, 0.3)
+simulator.Initialize(init_vertices, elements, 1e3, 4e5, 0.3)
 
 def ground_collision(position):
     return position[:, 2]

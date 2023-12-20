@@ -207,13 +207,13 @@ class DeformableSimulator(torch.nn.Module):
 
     def ComputePenaltyEnergy(self,position):
         EPISLON = 1e-4
-        PENALTY_COEFFICIENT = 1e6
+        PENALTY_COEFFICIENT = 1e8
         distance_list = []
         for collision in self.collision_bound:
             distance_list.append(collision(position))
         energy = 0
         for distance in distance_list:
-            vertices_energy = PENALTY_COEFFICIENT * (torch.nn.functional.relu(EPISLON - distance, inplace=False)**2 + torch.nn.functional.relu(EPISLON - distance, inplace=False))
+            vertices_energy = PENALTY_COEFFICIENT * (torch.nn.functional.relu(EPISLON - distance, inplace=False)**2)
             energy += vertices_energy.sum()
         return energy
     
