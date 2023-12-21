@@ -181,3 +181,7 @@ render_bouncing_torus/
 simple_cloth----/
 ball_on_pin/
 render_ball_on_pin/
+bunny/
+render_bunny/
+bunny_on_pins/
+render_bunny_on_pins/
