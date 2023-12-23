@@ -61,8 +61,10 @@ simulatorController = DeformableSimulatorController(simulator)
 simulatorController.cuda()
 
 def step():
-    for i in range(100):
-        simulatorController.Forward(0.0001)
+    TIME=0.0001*100
+    current_time=0.0
+    while current_time <= TIME:
+        current_time += simulatorController.Forward(0.001,zoomin_factor_for_collision=10.)
 
 
 for f in tqdm(range(120)):

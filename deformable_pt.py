@@ -217,6 +217,18 @@ class DeformableSimulator(torch.nn.Module):
             energy += vertices_energy.sum()
         return energy
     
+    def is_in_collision_state(self,position):
+        if self.ComputePenaltyEnergy(position) > 1e-8:
+            return True
+        else:
+            return False
+
+    def tends_to_be_in_collision_state(self,position,time_step):
+        if self.ComputePenaltyEnergy(position + self.velocity*time_step) > 1e-8:
+            return True
+        else:
+            return False
+    
     # def ComputeElasticForce(self,position):
     #     element_num = self.undeformed.elements_num
     #     basis_derivatives_q = self.undeformed.finite_elements_polynomials[:,:4,:3]
@@ -290,8 +302,9 @@ class DeformableSimulator(torch.nn.Module):
 class DeformableSimulatorController(torch.nn.Module):
     def __init__(self,model):
         super().__init__()
+        self.is_collision = False
         self.model = model
-
+        self.current_time_step = 0.0
         self.Adam_MaxIter = 100
         self.optimizer_Adam_list = [
         #     torch.optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()),lr=1e-6),
@@ -318,8 +331,35 @@ class DeformableSimulatorController(torch.nn.Module):
         ]
         
         
-    def Forward(self,time_step):
-        self.model.UpdateNextPosition()
+    def Forward(self,global_time_step, zoomin_factor_for_collision = 1.):
+        # model.next_position := model.position
+        # current_time_step := global_time_step if not (collide/tend to collide) else global_time_step/zoomin_factor_for_collision
+        # update model.next_position by current_time_step
+        # recalculate and update model.next_position by global_time_step/zoomin_factor_for_collision, if collision happens and current_time_step is large.
+        # model.velocity := model.next_position - model.position, model.position := model.next_position
+        # 素晴らしいデザイン😋
+        
+        self.model.UpdateNextPosition() 
+        
+        
+        zoomin_flag = self.model.tends_to_be_in_collision_state(self.model.next_position,global_time_step) or self.model.is_in_collision_state(self.model.next_position)
+        current_time_step = global_time_step if not zoomin_flag else global_time_step/zoomin_factor_for_collision
+        self.Forward_by_current_time_step(current_time_step)
+        
+        # notice: here we use smaller time step, if the model is in collision state (which is trival and obvious), and also if the model tends to be in collision state.
+        # We calculate more situations here, in order not to re-calculate the collision state in the following if statement.
+        
+           
+        if self.model.is_in_collision_state(self.model.next_position) and not zoomin_flag:
+            current_time_step = global_time_step/zoomin_factor_for_collision
+            self.Forward_by_current_time_step(current_time_step) 
+        
+        self.model.UpdatePositionAndVelocity(current_time_step)
+        
+        return current_time_step
+        
+    
+    def Forward_by_current_time_step(self,time_step):
         for optimizer in self.optimizer_Adam_list:
             for _ in range(self.Adam_MaxIter):
                 optimizer.zero_grad()
@@ -328,7 +368,7 @@ class DeformableSimulatorController(torch.nn.Module):
                 loss['energy'].backward()
                 self.model.next_position.grad[self.model.free_vertex_vector_field==0] *= 0
                 optimizer.step()
-            
+
         for optimizer in self.optimizer_LBFGS_list:
                 def closure():
                     optimizer.zero_grad()
@@ -340,5 +380,3 @@ class DeformableSimulatorController(torch.nn.Module):
                     self.model.next_position.grad[self.model.free_vertex_vector_field==0] *= 0
                     return loss['energy']
                 optimizer.step(closure)
-        
-        self.model.UpdatePositionAndVelocity(time_step)
