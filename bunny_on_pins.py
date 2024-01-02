@@ -91,18 +91,39 @@ def pin_collision_9(position):
     z = position[:, 2]
     return (5 * r + z - 1) / np.sqrt(26)
 
+def add_pin(pin_position):
+    def pin_collision(position):
+        r = torch.norm(position[:, :2] - pin_position, dim=1)
+        z = position[:, 2]
+        return (5 * r + z - 1) / np.sqrt(26)
+    simulator.collision_bound.append(pin_collision)
+
 
 
 simulator.collision_bound.append(ground_collision)
-simulator.collision_bound.append(pin_collision_1)
-simulator.collision_bound.append(pin_collision_2)
-simulator.collision_bound.append(pin_collision_3)
-simulator.collision_bound.append(pin_collision_4)
-simulator.collision_bound.append(pin_collision_5)
-simulator.collision_bound.append(pin_collision_6)
-simulator.collision_bound.append(pin_collision_7)
-simulator.collision_bound.append(pin_collision_8)
-simulator.collision_bound.append(pin_collision_9)
+# simulator.collision_bound.append(pin_collision_1)
+# simulator.collision_bound.append(pin_collision_2)
+# simulator.collision_bound.append(pin_collision_3)
+# simulator.collision_bound.append(pin_collision_4)
+# simulator.collision_bound.append(pin_collision_5)
+# simulator.collision_bound.append(pin_collision_6)
+# simulator.collision_bound.append(pin_collision_7)
+# simulator.collision_bound.append(pin_collision_8)
+# simulator.collision_bound.append(pin_collision_9)
+
+for i in range(1, 6):
+    for j in range(5):
+        add_pin(torch.tensor([i * 0.5, j * 0.5], dtype=torch.float64, device=torch.device("cuda")))
+        add_pin(torch.tensor([-i * 0.5, j * 0.5], dtype=torch.float64, device=torch.device("cuda")))
+        add_pin(torch.tensor([i * 0.5, -j * 0.5], dtype=torch.float64, device=torch.device("cuda")))
+        add_pin(torch.tensor([-i * 0.5, -j * 0.5], dtype=torch.float64, device=torch.device("cuda")))
+for i in range(1, 6):
+    add_pin(torch.tensor([i * 0.5, 0], dtype=torch.float64, device=torch.device("cuda")))
+    add_pin(torch.tensor([-i * 0.5, 0], dtype=torch.float64, device=torch.device("cuda")))
+    add_pin(torch.tensor([0, i * 0.5], dtype=torch.float64, device=torch.device("cuda")))
+    add_pin(torch.tensor([0, -i * 0.5], dtype=torch.float64, device=torch.device("cuda")))
+add_pin(torch.tensor([0, 0], dtype=torch.float64, device=torch.device("cuda")))
+
 for i in range(vertices_num):
     simulator.external_acceleration[i] = torch.tensor([0, 0, -9.8])
 print("Initialization finished.")
@@ -122,7 +143,7 @@ RENDER_STEP = 0.01
 current_time = 0.0
 previous_frame = -1
 while current_time < TOTAL_TIME:
-    current_time += simulatorController.Forward(NORMAL_SIM_STEP,zoomin_factor_for_collision=10.)
+    current_time += simulatorController.Forward(NORMAL_SIM_STEP,zoomin_factor_for_collision=2.)
     current_frame = int(current_time/RENDER_STEP)
     if current_frame - previous_frame >= 1:
         position_np = simulator.position.detach().cpu().numpy()

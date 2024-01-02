@@ -63,7 +63,7 @@ def main():
     render_folder = Path(root) / "render_bouncing_torus"
     create_folder(render_folder, exist_ok=True)
 
-    for f in range(0, 200):
+    for f in range(0, 250):
         obj = (np.load(data_folder / "{:04d}.npy".format(f)), np.load(data_folder / "elements.npy"))
         render_data(render_folder / "{:04d}.png".format(f), obj)
     export_gif(render_folder, render_folder / "bouncing_torus.gif", 0, "0", ".png")

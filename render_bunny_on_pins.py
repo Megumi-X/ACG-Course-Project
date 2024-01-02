@@ -53,15 +53,31 @@ def render_data(render_folder, image_name, obj):
     
     r.add_triangle_mesh(vertices, elements, None, None, ("diffuse", { "rgb reflectance": (0.1, 0.4, 0.7) }))
     r.add_plane([0.0, 0.0, 0.0], [0.0, 0.0, 1.0], 10000, ("diffuse", { "rgb reflectance": (0.7, 0.4, 0.1) }))
-    r.add_triangle_mesh(cone_mesh.vertices * 1e3, cone_mesh.faces, None, None, ("diffuse", { "rgb reflectance": (0.2, 0.7, 0.3) }))
-    r.add_triangle_mesh(cone_mesh.vertices * 1e3 + to_real_array([0.5, 0, 0]), cone_mesh.faces, None, None, ("diffuse", { "rgb reflectance": (0.2, 0.7, 0.3) }))
-    r.add_triangle_mesh(cone_mesh.vertices * 1e3 + to_real_array([-0.5, 0, 0]), cone_mesh.faces, None, None, ("diffuse", { "rgb reflectance": (0.2, 0.7, 0.3) }))
-    r.add_triangle_mesh(cone_mesh.vertices * 1e3 + to_real_array([0, 0.5, 0]), cone_mesh.faces, None, None, ("diffuse", { "rgb reflectance": (0.2, 0.7, 0.3) }))
-    r.add_triangle_mesh(cone_mesh.vertices * 1e3 + to_real_array([0, -0.5, 0]), cone_mesh.faces, None, None, ("diffuse", { "rgb reflectance": (0.2, 0.7, 0.3) }))
-    r.add_triangle_mesh(cone_mesh.vertices * 1e3 + to_real_array([0.5, -0.5, 0]), cone_mesh.faces, None, None, ("diffuse", { "rgb reflectance": (0.2, 0.7, 0.3) }))
-    r.add_triangle_mesh(cone_mesh.vertices * 1e3 + to_real_array([-0.5, 0.5, 0]), cone_mesh.faces, None, None, ("diffuse", { "rgb reflectance": (0.2, 0.7, 0.3) }))
-    r.add_triangle_mesh(cone_mesh.vertices * 1e3 + to_real_array([0.5, 0.5, 0]), cone_mesh.faces, None, None, ("diffuse", { "rgb reflectance": (0.2, 0.7, 0.3) }))
-    r.add_triangle_mesh(cone_mesh.vertices * 1e3 + to_real_array([-0.5, -0.5, 0]), cone_mesh.faces, None, None, ("diffuse", { "rgb reflectance": (0.2, 0.7, 0.3) }))
+    def add_cone_mesh(position):
+        r.add_triangle_mesh(cone_mesh.vertices * 1e3 + to_real_array(position), cone_mesh.faces, None, None, ("diffuse", { "rgb reflectance": (0.2, 0.7, 0.3) }))
+
+    for i in range(1, 6):
+        for j in range(1, 6):
+            add_cone_mesh([i * 0.5, j * 0.5, 0])
+            add_cone_mesh([-i * 0.5, j * 0.5, 0])
+            add_cone_mesh([i * 0.5, -j * 0.5, 0])
+            add_cone_mesh([-i * 0.5, -j * 0.5, 0])
+    for i in range(1, 6):
+        add_cone_mesh([i * 0.5, 0, 0])
+        add_cone_mesh([-i * 0.5, 0, 0])
+        add_cone_mesh([0, i * 0.5, 0])
+        add_cone_mesh([0, -i * 0.5, 0])
+    add_cone_mesh([0, 0, 0])
+
+    # r.add_triangle_mesh(cone_mesh.vertices * 1e3, cone_mesh.faces, None, None, ("diffuse", { "rgb reflectance": (0.2, 0.7, 0.3) }))
+    # r.add_triangle_mesh(cone_mesh.vertices * 1e3 + to_real_array([0.5, 0, 0]), cone_mesh.faces, None, None, ("diffuse", { "rgb reflectance": (0.2, 0.7, 0.3) }))
+    # r.add_triangle_mesh(cone_mesh.vertices * 1e3 + to_real_array([-0.5, 0, 0]), cone_mesh.faces, None, None, ("diffuse", { "rgb reflectance": (0.2, 0.7, 0.3) }))
+    # r.add_triangle_mesh(cone_mesh.vertices * 1e3 + to_real_array([0, 0.5, 0]), cone_mesh.faces, None, None, ("diffuse", { "rgb reflectance": (0.2, 0.7, 0.3) }))
+    # r.add_triangle_mesh(cone_mesh.vertices * 1e3 + to_real_array([0, -0.5, 0]), cone_mesh.faces, None, None, ("diffuse", { "rgb reflectance": (0.2, 0.7, 0.3) }))
+    # r.add_triangle_mesh(cone_mesh.vertices * 1e3 + to_real_array([0.5, -0.5, 0]), cone_mesh.faces, None, None, ("diffuse", { "rgb reflectance": (0.2, 0.7, 0.3) }))
+    # r.add_triangle_mesh(cone_mesh.vertices * 1e3 + to_real_array([-0.5, 0.5, 0]), cone_mesh.faces, None, None, ("diffuse", { "rgb reflectance": (0.2, 0.7, 0.3) }))
+    # r.add_triangle_mesh(cone_mesh.vertices * 1e3 + to_real_array([0.5, 0.5, 0]), cone_mesh.faces, None, None, ("diffuse", { "rgb reflectance": (0.2, 0.7, 0.3) }))
+    # r.add_triangle_mesh(cone_mesh.vertices * 1e3 + to_real_array([-0.5, -0.5, 0]), cone_mesh.faces, None, None, ("diffuse", { "rgb reflectance": (0.2, 0.7, 0.3) }))
 
 
     # The real rendering job starts here.

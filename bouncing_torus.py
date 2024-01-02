@@ -37,12 +37,12 @@ elements_num = elements_np.shape[0]
 
 init_vertices = torch.tensor(vertices_np, dtype=torch.float64)
 elements = torch.tensor(elements_np, dtype=torch.long)
-# init_vertices = torch.matmul(torch.tensor([[1, 0, 0], [0, np.cos(0.49 * np.pi), np.sin(0.49 * np.pi)], [0, - np.sin(0.49 * np.pi), np.cos(0.49 * np.pi)]], dtype=torch.float64), init_vertices.transpose(0, 1)).transpose(0, 1)
+init_vertices = torch.matmul(torch.tensor([[1, 0, 0], [0, np.cos(0.49 * np.pi), np.sin(0.49 * np.pi)], [0, - np.sin(0.49 * np.pi), np.cos(0.49 * np.pi)]], dtype=torch.float64), init_vertices.transpose(0, 1)).transpose(0, 1)
 init_vertices += torch.tensor([0, 0, 2])
 
 print("Initializing...")
 simulator = DeformableSimulator(vertices_num, elements_num)
-simulator.Initialize(init_vertices, elements, 1e3, 1e4, 0.3)
+simulator.Initialize(init_vertices, elements, 1e3, 3e6, 0.3)
 
 def ground_collision(position):
     return position[:, 2]
@@ -64,10 +64,10 @@ def step():
     TIME=0.0001*100
     current_time=0.0
     while current_time <= TIME:
-        current_time += simulatorController.Forward(0.001,zoomin_factor_for_collision=10.)
+        current_time += simulatorController.Forward(0.01,zoomin_factor_for_collision=10.)
 
 
-for f in tqdm(range(120)):
+for f in tqdm(range(250)):
     step()
     position_np = simulator.position.detach().cpu().numpy()
     np.save(folder / "{:04d}.npy".format(f + 1), position_np)
