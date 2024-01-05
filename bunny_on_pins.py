@@ -135,17 +135,17 @@ np.save(folder / "0000.npy", position_0)
 
 simulatorController = DeformableSimulatorController(simulator)
 simulatorController.cuda()
+if __name__ == "__main__":
+    TOTAL_TIME = 600*10*0.001
+    NORMAL_SIM_STEP = 0.01
+    RENDER_STEP = 0.01
 
-TOTAL_TIME = 600*10*0.001
-NORMAL_SIM_STEP = 0.01
-RENDER_STEP = 0.01
-
-current_time = 0.0
-previous_frame = -1
-while current_time < TOTAL_TIME:
-    current_time += simulatorController.Forward(NORMAL_SIM_STEP,zoomin_factor_for_collision=2.)
-    current_frame = int(current_time/RENDER_STEP)
-    if current_frame - previous_frame >= 1:
-        position_np = simulator.position.detach().cpu().numpy()
-        np.save(folder / "{:04d}.npy".format(current_frame + 1), position_np)
-        previous_frame = current_frame
+    current_time = 0.0
+    previous_frame = -1
+    while current_time < TOTAL_TIME:
+        current_time += simulatorController.Forward(NORMAL_SIM_STEP,zoomin_factor_for_collision=2.)
+        current_frame = int(current_time/RENDER_STEP)
+        if current_frame - previous_frame >= 1:
+            position_np = simulator.position.detach().cpu().numpy()
+            np.save(folder / "{:04d}.npy".format(current_frame + 1), position_np)
+            previous_frame = current_frame

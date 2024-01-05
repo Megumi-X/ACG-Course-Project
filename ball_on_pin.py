@@ -69,20 +69,20 @@ simulatorController.cuda()
 
 
 
+if __name__ == "__main__":
+    TOTAL_TIME=120*10*0.001
+    NORMAL_SIM_STEP=0.01 # collision stm step would be this devided by 10.
+    RENDER_STEP=0.01
 
-TOTAL_TIME=120*10*0.001
-NORMAL_SIM_STEP=0.01 # collision stm step would be this devided by 10.
-RENDER_STEP=0.01
+    frame_num=0
+    current_time=0.0
+    previous_frame=-1
 
-frame_num=0
-current_time=0.0
-previous_frame=-1
-
-while current_time < TOTAL_TIME:
-    current_time += simulatorController.Forward(NORMAL_SIM_STEP,zoomin_factor_for_collision=10.)
-    current_frame = int(current_time / RENDER_STEP)
-    if current_frame - previous_frame >= 1:
-        print(f"{current_time}/{TOTAL_TIME}")
-        position_np = simulator.position.detach().cpu().numpy()
-        previous_frame = current_frame
-        np.save(folder / "{:04d}.npy".format(current_frame + 1), position_np)
+    while current_time < TOTAL_TIME:
+        current_time += simulatorController.Forward(NORMAL_SIM_STEP,zoomin_factor_for_collision=10.)
+        current_frame = int(current_time / RENDER_STEP)
+        if current_frame - previous_frame >= 1:
+            print(f"{current_time}/{TOTAL_TIME}")
+            position_np = simulator.position.detach().cpu().numpy()
+            previous_frame = current_frame
+            np.save(folder / "{:04d}.npy".format(current_frame + 1), position_np)
