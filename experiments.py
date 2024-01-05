@@ -259,7 +259,7 @@ if __name__ == "__main__":
     gpu_result = gpu_acc_experiments()
     torch.save(gpu_result,'gpu_acc_result.pt')
     MP_result = motionpro_acc_experiments()
-    torch.save(MP_result,'motionpro_result.pt')
+    torch.save(MP_result,'motionpro_acc_result.pt')
 
 # you may use:
 # gpu_result = torch.load('gpu_acc_result.pt')
