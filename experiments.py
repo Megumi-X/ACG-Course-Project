@@ -6,7 +6,7 @@ def gpu_acc_experiments():
     from ball_on_pin import simulatorController
     print("Start cpu experiments for ballOnPin!")
     simulatorController.cpu()
-    TOTAL_TIME=120*10*0.001
+    TOTAL_TIME=120*10*0.001*0.05
     NORMAL_SIM_STEP=0.01 # collision stm step would be this devided by 10.
     RENDER_STEP=0.002
 
@@ -48,7 +48,7 @@ def gpu_acc_experiments():
     from bunny_in_pipe import simulatorController
     print("Start cpu experiments for bunnyInPipe!")
     simulatorController.cpu()
-    TOTAL_TIME = 200*10*0.001
+    TOTAL_TIME = 200*10*0.001*0.05
     NORMAL_SIM_STEP = 0.01
     RENDER_STEP = 0.01
 
@@ -89,7 +89,7 @@ def gpu_acc_experiments():
 
     from bunny_on_pins import simulatorController
     simulatorController.cpu()
-    TOTAL_TIME = 600*10*0.001
+    TOTAL_TIME = 600*10*0.001*0.05
     NORMAL_SIM_STEP = 0.01
     RENDER_STEP = 0.01
 
