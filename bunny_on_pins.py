@@ -93,7 +93,7 @@ def pin_collision_9(position):
 
 def add_pin(pin_position):
     def pin_collision(position):
-        r = torch.norm(position[:, :2] - pin_position, dim=1)
+        r = torch.norm(position[:, :2] - pin_position.to(position.device), dim=1)
         z = position[:, 2]
         return (5 * r + z - 1) / np.sqrt(26)
     simulator.collision_bound.append(pin_collision)
@@ -113,16 +113,16 @@ simulator.collision_bound.append(ground_collision)
 
 for i in range(1, 6):
     for j in range(5):
-        add_pin(torch.tensor([i * 0.5, j * 0.5], dtype=torch.float64, device=torch.device("cuda")))
-        add_pin(torch.tensor([-i * 0.5, j * 0.5], dtype=torch.float64, device=torch.device("cuda")))
-        add_pin(torch.tensor([i * 0.5, -j * 0.5], dtype=torch.float64, device=torch.device("cuda")))
-        add_pin(torch.tensor([-i * 0.5, -j * 0.5], dtype=torch.float64, device=torch.device("cuda")))
+        add_pin(torch.tensor([i * 0.5, j * 0.5], dtype=torch.float64, ))
+        add_pin(torch.tensor([-i * 0.5, j * 0.5], dtype=torch.float64, ))
+        add_pin(torch.tensor([i * 0.5, -j * 0.5], dtype=torch.float64, ))
+        add_pin(torch.tensor([-i * 0.5, -j * 0.5], dtype=torch.float64, ))
 for i in range(1, 6):
-    add_pin(torch.tensor([i * 0.5, 0], dtype=torch.float64, device=torch.device("cuda")))
-    add_pin(torch.tensor([-i * 0.5, 0], dtype=torch.float64, device=torch.device("cuda")))
-    add_pin(torch.tensor([0, i * 0.5], dtype=torch.float64, device=torch.device("cuda")))
-    add_pin(torch.tensor([0, -i * 0.5], dtype=torch.float64, device=torch.device("cuda")))
-add_pin(torch.tensor([0, 0], dtype=torch.float64, device=torch.device("cuda")))
+    add_pin(torch.tensor([i * 0.5, 0], dtype=torch.float64, ))
+    add_pin(torch.tensor([-i * 0.5, 0], dtype=torch.float64, ))
+    add_pin(torch.tensor([0, i * 0.5], dtype=torch.float64, ))
+    add_pin(torch.tensor([0, -i * 0.5], dtype=torch.float64, ))
+add_pin(torch.tensor([0, 0], dtype=torch.float64, ))
 
 for i in range(vertices_num):
     simulator.external_acceleration[i] = torch.tensor([0, 0, -9.8])
