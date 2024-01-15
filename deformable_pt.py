@@ -380,3 +380,7 @@ class DeformableSimulatorController(torch.nn.Module):
                     self.model.next_position.grad[self.model.free_vertex_vector_field==0] *= 0
                     return loss['energy']
                 optimizer.step(closure)
+    def save_partial_result(self,save_position):
+        torch.save(self.state_dict(), save_position)
+    def initialize_from_partial_result(self,save_position):
+        self.load_state_dict(save_position)
